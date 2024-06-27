@@ -1,0 +1,27 @@
+{
+    "flagServer":
+    {
+        "ip": "127.0.0.1",
+        "port": 80,
+        "api_endpoint": "/test",
+        "team_token": "12345",
+        "game_tick_duration" : 120,
+        "flags_submission_window" : 10
+    },
+    
+    "peacefulFarm": {
+        "require_authentification": true,
+        "accounts": [
+            {
+                "username": "napoli",
+                "password": "forzanapoli"
+            },
+            {
+                "username": "test",
+                "password": "test123"
+            }
+        ],
+        "api_key": "1234567890",
+        "port": 80
+    }
+}
