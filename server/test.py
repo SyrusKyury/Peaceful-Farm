@@ -3,9 +3,9 @@ json = {
     "api_key": "1234567890",
     "flags": [
         "string",
-        "SAS",
-        "CAZZO",
-        "FICA"
+        "test1",
+        "test2",
+        "test3"
     ],
     "exploit": "string",
     "service": "string",
