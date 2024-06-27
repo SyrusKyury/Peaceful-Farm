@@ -1,7 +1,8 @@
-from flask import Flask, request, g
+from flask import Flask, request, g, render_template
 from src.auth import requires_auth, requires_api_key
-from src.config import configuration
+from src.config import configuration, banner
 from src.flag_submission_service import start_background_task
+import datetime
 import src.SQlite as db
 import random
 
@@ -17,8 +18,7 @@ def close_connection(exception):
 @app.route('/')
 @requires_auth
 def public_page():
-    # TODO: Mostrare informazioni sulle flag inviate e statistiche
-    return "Questa è una pagina pubblica"
+    return render_template('index.html')
 
 
 @app.route('/flags', methods=['POST'])
@@ -67,6 +67,32 @@ def get_flags():
     flags = db.get_flags()
     return {'flags': flags}
 
+@app.route('/filter', methods=['GET'])
+@requires_auth
+def filter():
+    
+    # Getting the request data
+    data = request.args
+    if 'group' not in data.keys():
+        return "No group provided", 400
+    
+    if 't1' not in data.keys():
+        return "No t1 provided", 400
+    
+    if 't2' not in data.keys():
+        return "No t2 provided", 400
+    
+
+    t1 = data['t1']                 # HH:MM
+    t2 = data['t2']                 # HH:MM
+    group = data['group'].lower()   # group by column
+
+    t1 = datetime.datetime.now().replace(hour=int(t1.split(":")[0]), minute=int(t1.split(":")[1]))
+    t2 = datetime.datetime.now().replace(hour=int(t2.split(":")[0]), minute=int(t2.split(":")[1]))
+    
+    return db.get_flags_statistics(group, t1, t2)
+
+
 @app.route('/test', methods=['PUT'])
 def test():
     # Getting the request data
@@ -89,8 +115,9 @@ def test():
     return response, 200
 
 if __name__ == '__main__':
+    print(banner)
     with app.app_context():
         db.init_db()
     with app.app_context() as context:
         start_background_task(context)
-    app.run(debug = True, port=configuration['peacefulFarm']['port'], use_reloader=False)
+    app.run(debug = False, port=configuration['peacefulFarm']['port'])

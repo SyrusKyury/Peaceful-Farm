@@ -98,3 +98,26 @@ def update_flag_status(flag, status, message=None):
     ''', (status, message, flag))
     conn.commit()
 
+def get_flags_statistics(group : str, t1 : datetime.datetime = None, t2 : datetime.datetime = None):
+    # Returning the statistics as a table in a time range between t1 and t2:
+    # {group}, {Accepted}, {Rejected}, {Pending}
+    # {group} is the column we're grouping by
+    # {Accepted} is the total number of accepted flags
+    # {Rejected} is the total number of rejected flags
+    # {Pending} is the total number of pending flags
+
+    cursor = get_db_cursor()
+    query = f"""
+    SELECT 
+        {group} AS selected_group,
+        SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS Accepted,
+        SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS Rejected,
+        SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS Pending
+        FROM flags
+        WHERE date BETWEEN '{t1}' AND '{t2}'
+        GROUP BY selected_group;
+    """
+    print(query)
+    cursor.execute(query)
+
+    return cursor.fetchall()

@@ -25,8 +25,12 @@ def background_task(Appcontext):
     seconds_since_gamestart: float = (datetime.now() - game_start).total_seconds()
     current_round: int = 1 + seconds_since_gamestart // GAMETICK_DURATION
 
+    print("-"*50)
+    print("Game information")
+    print("-"*50)
     print(f"Game started at {game_start}")
     print(f"Current round: {current_round}")
+    print("-"*50 + "\n\n\n\n")
 
     if current_round < 0:
         print("Game has not started yet")

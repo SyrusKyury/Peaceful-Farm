@@ -4,6 +4,26 @@ import os
 import time
 import re
 
+
+def exploit(target_ip : str) -> list[str]:
+    flags = set()
+
+    # -------------------------------------------------------------------------
+    # Your exploit here
+    # -------------------------------------------------------------------------
+    # Example:
+    # response = requests.get(f"http://{target_ip}/flag")
+    # flag = response.text
+    # flags.add(flag)
+    # -------------------------------------------------------------------------
+    # Have fun!
+    # -------------------------------------------------------------------------
+
+
+    # Don't touch this, it will return only valid flags
+    return set([i for i in flags if re.match(FLAG_REGEX, i)])
+
+
 #------------------------------------------------------------------------------
 # Peaceful Farm settings
 #------------------------------------------------------------------------------
@@ -27,31 +47,6 @@ SUBMIT_TIME = 30
 
 SERVICE = "Example"    # Service you're exploiting
 EXPLOIT = "Peaceful Farm"    # Name of your exploit
-
-
-def exploit(target_ip : str) -> list[str]:
-    flags = set()
-
-    # -------------------------------------------------------------------------
-    # Your exploit here
-    # -------------------------------------------------------------------------
-    # Example:
-    # response = requests.get(f"http://{target_ip}/flag")
-    # flag = response.text
-    # flags.add(flag)
-    # -------------------------------------------------------------------------
-    # Have fun!
-    # -------------------------------------------------------------------------
-
-
-    # Don't touch this, it will return only valid flags
-    return set([i for i in flags if re.match(FLAG_REGEX, i)])
-
-
-
-#------------------------------------------------------------------------------
-
-flags = set()
 
 #------------------------------------------------------------------------------
 # Submit flags
@@ -81,6 +76,7 @@ if __name__ == '__main__':
     target_ip_list = [f"10.60.0.{i}" for i in range(N_TEAMS, 0, -1) if i != NOP_TEAM_ID and i != TEAM_ID]
 
     futures = []
+    flags = set()
     now = time.time()
     with ThreadPoolExecutor() as pool:
         try:

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Search</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <center><img src="static/logo.png" alt="Logo" style="width:60%;"></center>
+</head>
+<body>
+  <div class="container">
+    <div class="row">
+      <div class="col">
+        <form id="searchForm">
+          <div class="form-row">
+            <div class="col-md-4 mb-3">
+              <label for="startTime">Start Time:</label>
+              <input type="time" class="form-control" id="startTime" name="startTime">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="endTime">End Time:</label>
+              <input type="time" class="form-control" id="endTime" name="endTime">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="filteredGroup">Event Type:</label>
+              <select class="form-control" id="filteredGroup" name="filteredGroup">
+                <option value="exploit">Exploit</option>
+                <option value="nickname">Attacker Nickname</option>
+                <option value="service">Service Name</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="col">
+              <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="row mt-4">
+      <div class="col">
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <tbody id="resultsBody">
+              <!-- Table body will be populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS and jQuery (needed for Bootstrap) -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@1.16.1/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  
+  <!-- JavaScript to handle form submission and table rendering -->
+  <script>
+    // Event listener for form submission
+    document.getElementById('searchForm').addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent the form from submitting
+
+    // Fetch form values
+    var startTime = document.getElementById('startTime').value;
+    var endTime = document.getElementById('endTime').value;
+    var filteredGroup = document.getElementById('filteredGroup').value;
+    var data;
+    console.log(startTime, endTime, filteredGroup);
+
+    // Preparing the data to be sent to the server with a GET request
+    var url = '/filter?t1=' + startTime + '&t2=' + endTime + '&group=' + filteredGroup;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(response => {
+            data = response;
+        }).then(() => {
+
+            // Render table rows based on fetched data
+            var resultsBody = document.getElementById('resultsBody');
+            resultsBody.innerHTML = ''; // Clear existing rows
+            console.log(data);
+            // Setting column names
+            var row = document.createElement('tr');
+            row.innerHTML = '<th>' + filteredGroup.toUpperCase() + '</th><th>Denied Flag</th><th>Accepted Flags</th><th>Pending Flags</th>';
+            resultsBody.appendChild(row);
+
+            data.forEach(function(item) {
+                console.log(item);
+                var row = document.createElement('tr');
+                row.innerHTML = '<td>' + item[0] + '</td><td>' + item[1] + '</td><td>' + item[2] + '</td><td>' + item[3] + '</td>';
+                resultsBody.appendChild(row);
+            });
+
+
+        });
+
+});
+</script>
+</body>
+</html>
