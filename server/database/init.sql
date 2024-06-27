@@ -1,0 +1,2 @@
+GRANT ALL PRIVILEGES ON *.* TO 'napoli'@'%' IDENTIFIED BY 'forza_napoli';
+FLUSH PRIVILEGES;

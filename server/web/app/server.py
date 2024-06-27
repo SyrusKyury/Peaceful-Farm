@@ -4,15 +4,15 @@ from src.config import configuration, banner
 from src.flag_submission_service import start_background_task
 import datetime
 import src.SQlite as db
+from flask_mysqldb import MySQL
 import random
 
 app = Flask(__name__)
-
-@app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
+app.config['MYSQL_HOST'] = 'db'
+app.config['MYSQL_USER'] = 'napoli'
+app.config['MYSQL_PASSWORD'] = 'forza_napoli'
+app.config['MYSQL_DB'] = 'cyber_challenge'
+mysql = MySQL(app)
 
 
 @app.route('/')
@@ -52,19 +52,20 @@ def flags():
     if 'nickname' not in data.keys() or not data['nickname']:
         return "No nickname provided", 400
     
+
     with app.app_context():
-        new_flags = db.insert_flags(data['flags'], data['service'], data['exploit'], data['nickname'])
+        new_flags = db.insert_flags(mysql.connection.cursor(), data['flags'], data['service'], data['exploit'], data['nickname'])
 
     if new_flags == 0:
         return "I've tried to insert the provided flags, but they already exist", 200
     else:
         return "Flags inserted: " + str(new_flags), 201
 
-# Get all the flags
+# Get all the flag
 @app.route('/flags', methods=['GET'])
 @requires_auth
 def get_flags():
-    flags = db.get_flags()
+    flags = db.get_flags(mysql.connection.cursor())
     return {'flags': flags}
 
 @app.route('/filter', methods=['GET'])
@@ -90,7 +91,7 @@ def filter():
     t1 = datetime.datetime.now().replace(hour=int(t1.split(":")[0]), minute=int(t1.split(":")[1]))
     t2 = datetime.datetime.now().replace(hour=int(t2.split(":")[0]), minute=int(t2.split(":")[1]))
     
-    return db.get_flags_statistics(group, t1, t2)
+    return db.get_flags_statistics(mysql.connection.cursor(), group, t1, t2)
 
 
 @app.route('/test', methods=['PUT'])
@@ -117,7 +118,7 @@ def test():
 if __name__ == '__main__':
     print(banner)
     with app.app_context():
-        db.init_db()
+        db.init_db(mysql.connection.cursor())
     with app.app_context() as context:
         start_background_task(context)
     app.run(debug = False, port=configuration['peacefulFarm']['port'])

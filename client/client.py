@@ -3,7 +3,6 @@ import requests
 import os
 import time
 import re
-import random
 
 
 def exploit(target_ip : str) -> list[str]:
@@ -20,12 +19,6 @@ def exploit(target_ip : str) -> list[str]:
     # Have fun!
     # -------------------------------------------------------------------------
 
-    dictionary = "ABCDEFGHIJKLMN0PQRSTUVWXYZ123456"
-    flag = "".join(random.choices(dictionary, k=31)) + "="
-    flags.add(flag)
-    time.sleep(1)
-
-
     # Don't touch this, it will return only valid flags
     return set([i for i in flags if re.match(FLAG_REGEX, i)])
 
@@ -34,7 +27,7 @@ def exploit(target_ip : str) -> list[str]:
 # Peaceful Farm settings
 #------------------------------------------------------------------------------
 SERVER_IP = "127.0.0.1"
-SERVER_PORT = "80"
+SERVER_PORT = "5000"
 NICKNAME = os.getenv('USER') or os.getenv('USERNAME')
 API_KEY = "1234567890"
 

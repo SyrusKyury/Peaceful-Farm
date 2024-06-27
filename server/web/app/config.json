@@ -2,7 +2,7 @@
     "flagServer":
     {
         "ip": "127.0.0.1",
-        "port": 80,
+        "port": 5000,
         "api_endpoint": "/test",
         "team_token": "12345",
         "game_tick_duration" : 120,
@@ -21,7 +21,6 @@
                 "password": "test123"
             }
         ],
-        "api_key": "1234567890",
-        "port": 80
+        "api_key": "1234567890"
     }
 }

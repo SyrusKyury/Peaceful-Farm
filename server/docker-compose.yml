@@ -1,0 +1,27 @@
+version: '3'
+services:
+  db:
+    image: mysql:5.7
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: cyber_challenge
+      MYSQL_USER: napoli
+      MYSQL_PASSWORD: forza_napoli
+    volumes:
+      - ./database/data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  web:
+    build: ./web
+    restart: always
+    ports:
+      - 5000:5000
+    volumes:
+      - ./web/app:/app:rw
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=mysql://db_user:db_password@db/db_name
