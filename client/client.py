@@ -3,6 +3,7 @@ import requests
 import os
 import time
 import re
+import random
 
 
 def exploit(target_ip : str) -> list[str]:
@@ -18,6 +19,11 @@ def exploit(target_ip : str) -> list[str]:
     # -------------------------------------------------------------------------
     # Have fun!
     # -------------------------------------------------------------------------
+
+    dictionary = "ABCDEFGHIJKLMN0PQRSTUVWXYZ123456"
+    flag = "".join(random.choices(dictionary, k=31)) + "="
+    flags.add(flag)
+    time.sleep(1)
 
 
     # Don't touch this, it will return only valid flags

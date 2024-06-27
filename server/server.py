@@ -40,16 +40,16 @@ def flags():
     # Getting the request data
     data = request.json
     
-    if 'flags' not in data.keys():
+    if 'flags' not in data.keys() or not data['flags']:
         return "No flags provided", 400
     
-    if 'exploit' not in data.keys():
+    if 'exploit' not in data.keys() or not data['exploit']:
         return "No exploit name provided", 400
     
-    if 'service' not in data.keys():
+    if 'service' not in data.keys() or not data['service']:
         return "No service name provided", 400
     
-    if 'nickname' not in data.keys():
+    if 'nickname' not in data.keys() or not data['nickname']:
         return "No nickname provided", 400
     
     with app.app_context():

@@ -117,7 +117,6 @@ def get_flags_statistics(group : str, t1 : datetime.datetime = None, t2 : dateti
         WHERE date BETWEEN '{t1}' AND '{t2}'
         GROUP BY selected_group;
     """
-    print(query)
     cursor.execute(query)
 
     return cursor.fetchall()

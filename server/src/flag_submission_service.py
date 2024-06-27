@@ -93,7 +93,7 @@ def submit_flags():
     result = requests.put(url, headers={'X-Team-Token': configuration["flagServer"]["team_token"]}, json=flags).text
     result = json.loads(result)
     for res in result:
-        if res['msg'].startswith('Accepted'):
+        if 'Accepted' in res['msg']:
             update_flag_status(res['flag'], ACCEPTED, res['msg'])
             accepted_flags += 1
         else:
