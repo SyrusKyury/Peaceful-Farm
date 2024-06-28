@@ -21,7 +21,7 @@ EXPLOIT = "Peaceful Farm"       # Name of your exploit
 # This will not submit flags to the server and will only print
 # the extracted flags.
 # -------------------------------------------------------------------------
-DEBUG = True                   
+DEBUG = False                   
 
 def exploit(target_ip : str) -> list[str]:
     flags = set()
