@@ -13,7 +13,6 @@ import string
 # EDIT THEESE PARAMETERS TO MATCH THE SERVICE YOU'RE EXPLOITING
 # THIS INFORMATION WILL BE USED TO RECORD STATISTICS ON THE SERVER
 #------------------------------------------------------------------------------
-
 SERVICE = "Example"             # Service you're exploiting
 EXPLOIT = "Peaceful Farm"       # Name of your exploit
 
@@ -22,8 +21,7 @@ EXPLOIT = "Peaceful Farm"       # Name of your exploit
 # This will not submit flags to the server and will only print
 # the extracted flags.
 # -------------------------------------------------------------------------
-
-DEBUG = False                   
+DEBUG = True                   
 
 def exploit(target_ip : str) -> list[str]:
     flags = set()
