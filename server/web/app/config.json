@@ -1,12 +1,12 @@
 {
     "flagServer":
     {
-        "ip": "127.0.0.1",
-        "port": 5000,
-        "api_endpoint": "/test",
-        "team_token": "12345",
+        "ip": "10.10.0.1",
+        "port": 8080,
+        "api_endpoint": "/flags",
+        "team_token": "31621d1472825a4339a676b6bcd8d81c",
         "game_tick_duration" : 120,
-        "flags_submission_window" : 10
+        "flags_submission_window" : 20
     },
     
     "peacefulFarm": {
