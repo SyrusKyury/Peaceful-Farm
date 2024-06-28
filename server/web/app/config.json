@@ -6,12 +6,15 @@
         "api_endpoint": "/flags",
         "team_token": "31621d1472825a4339a676b6bcd8d81c",
         "game_tick_duration" : 120,
-        "flags_submission_window" : 20
+        "flags_submission_window" : 20,
+        "debug": false
     },
     
-    "peacefulFarm": {
+    "client_settings": 
+    {
         "require_authentification": true,
-        "accounts": [
+        "accounts": 
+        [
             {
                 "username": "napoli",
                 "password": "forzanapoli"

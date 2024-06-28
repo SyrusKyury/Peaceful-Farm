@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Event Search</title>
+  <title>Peaceful Farm</title>
+  <!-- Setting favicon -->
+  <link rel="icon" href="static/favicon.ico" type="image/x-icon">
   <!-- Bootstrap CSS -->
   <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-  <center><img src="static/logo.png" alt="Logo" style="width:60%;"></center>
+  <center><a href="/"><img src="static/logo.png" alt="Logo" style="width:60%;"></a></center>
+
 </head>
 <body>
   <div class="container">
@@ -96,7 +99,8 @@
                 if (search_value === '' || item[0].toUpperCase().includes(search_value))
                 {
                   var row = document.createElement('tr');
-                  row.innerHTML = '<td>' + item[0] + '</td><td>' + item[1] + '</td><td>' + item[2] + '</td><td>' + item[3] + '</td>';
+                  first_item = '<td><a href="/stats?type=' + filteredGroup + '&value=' + item[0] + '&t1=' + startTime + '&t2=' + endTime + '">' + item[0] + '</a></td>'
+                  row.innerHTML = first_item + '<td>' + item[1] + '</td><td>' + item[2] + '</td><td>' + item[3] + '</td>';
                   resultsBody.appendChild(row);
                 }
             });

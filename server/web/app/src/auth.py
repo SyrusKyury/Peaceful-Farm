@@ -2,7 +2,7 @@ from flask import request, Response
 from src.config import configuration
 
 def check_auth(username, password):
-    accounts = configuration['peacefulFarm']['accounts']
+    accounts = configuration['client_settings']['accounts']
     for account in accounts:
         if account['username'] == username and account['password'] == password:
             return True
@@ -17,7 +17,7 @@ def authenticate():
 def requires_auth(f):
     def decorated(*args, **kwargs):
         # Check if authentification is required
-        if configuration['peacefulFarm']['require_authentification'] == False:
+        if configuration['client_settings']['require_authentification'] == False:
             return f(*args, **kwargs)
         auth = request.authorization
         if not auth or not check_auth(auth.username, auth.password):
@@ -29,7 +29,7 @@ def requires_auth(f):
 def requires_api_key(f):
     def decorated(*args, **kwargs):
         # Check if authentification is required
-        if 'api_key' not in request.json.keys() or request.json['api_key'] != configuration['peacefulFarm']['api_key']:
+        if 'api_key' not in request.json.keys() or request.json['api_key'] != configuration['client_settings']['api_key']:
             return "Unauthorized client", 401
         return f(*args, **kwargs)
     

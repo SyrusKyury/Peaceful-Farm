@@ -1,6 +1,7 @@
-from flask import Flask, request, g, render_template, jsonify
+from flask import Flask, request, g, render_template, jsonify, send_file
 from src.auth import requires_auth, requires_api_key
 from src.config import banner, configuration
+import matplotlib.pyplot as plt
 from flask_mysqldb import MySQL
 import random
 import time
@@ -9,6 +10,10 @@ import threading
 import requests
 import json
 import logging
+import io
+import base64
+
+# ----------------- Flask App -----------------
 
 app = Flask(__name__)
 app.config['MYSQL_HOST'] = 'db'
@@ -115,7 +120,7 @@ def filter():
     
     # Getting the request data
     data = request.args
-    if 'group' not in data.keys():
+    if 'group' not in data.keys() or not data['group']:
         return "No group provided", 400
     
     if 't1' not in data.keys():
@@ -125,9 +130,9 @@ def filter():
         return "No t2 provided", 400
     
 
-    t1 = data['t1']                 # HH:MM
-    t2 = data['t2']                 # HH:MM
-    group = data['group'].lower()   # group by column
+    t1 = data['t1'] if data['t1'] else "00:00"                  # HH:MM
+    t2 = data['t2'] if data['t2'] else "23:59"                  # HH:MM
+    group = data['group'].lower()                       # group by column
 
     t1 = datetime.now().replace(hour=int(t1.split(":")[0]), minute=int(t1.split(":")[1]))
     t2 = datetime.now().replace(hour=int(t2.split(":")[0]), minute=int(t2.split(":")[1]))
@@ -153,7 +158,7 @@ def filter():
 # Test endpoint
 # -------------------------------------------------------------
 
-@app.route('/test', methods=['PUT'])
+@app.route('/debug', methods=['PUT'])
 def test():
     # Getting the request data
     response_list = [
@@ -173,6 +178,97 @@ def test():
         response[-1]['status'] = True if response[-1]['msg'].startswith('Accepted') else False
 
     return response, 200
+
+# -------------------------------------------------------------
+# Statistics endpoint
+# -------------------------------------------------------------
+@app.route('/stats', methods=['GET'])
+def stats():
+    data = request.args
+    t1 = data['t1'] if data['t1'] else "00:00"                  # HH:MM
+    t2 = data['t2'] if data['t2'] else "23:59"                  # HH:MM
+    type = data['type'].upper() if data['type'] else "EXPLOIT"
+    value = data['value'].upper() if data['value'] else None
+
+    if not value:
+        return "No value provided", 400
+
+
+
+    t1 = datetime.now().replace(hour=int(t1.split(":")[0]), minute=int(t1.split(":")[1]))
+    t2 = datetime.now().replace(hour=int(t2.split(":")[0]), minute=int(t2.split(":")[1]))
+
+    # Divide the time between t1 and t2 in 2 minutes intervals
+    # and count the number of flags for each interval (Accepted, Rejected, Pending)
+    # Group by the selected type (Exploit, Service, Nickname) and filter by
+    # exploit, service or nickname value
+
+    query_template = f"""
+    SELECT {type},date,status,message,flag FROM flags where date BETWEEN '{t1}' AND '{t2}' AND {type} = '{value}' ORDER BY date;"""
+    cursor = mysql.connection.cursor()
+    cursor.execute(query_template)
+    fetch_result_list = list(cursor.fetchall())
+    cursor.close()
+
+    accepted = []
+    rejected = []
+    pending = []
+    denied_info = {}
+
+    while fetch_result_list:
+        fetch_result = fetch_result_list.pop(0)
+        start_time = fetch_result[1]
+        end_time = start_time + timedelta(seconds=configuration["flagServer"]["game_tick_duration"])
+        accepted_count = 0
+        rejected_count = 0
+        pending_count = 0
+        try:
+            while fetch_result and fetch_result[1] < end_time:
+                if fetch_result[2] == ACCEPTED:
+                    accepted_count += 1
+                elif fetch_result[2] == REJECTED:
+                    denied_info[fetch_result[4]] = fetch_result[3]
+                    rejected_count += 1
+                elif fetch_result[2] == PENDING:
+                    pending_count += 1
+                if fetch_result_list:
+                    fetch_result = fetch_result_list.pop(0)
+                else:
+                    fetch_result = None
+        except Exception as e:
+            return str(e), 500
+
+        accepted.append(accepted_count)
+        rejected.append(rejected_count)
+        pending.append(pending_count)
+    
+   
+    # Plotting a function of the number of flags for each interval
+    # The x-axis represents the time intervals
+    # The y-axis represents the number of flags
+    # The #0D8D39 bars represent the number of accepted flags
+    # The #55A5C0 bars represent the number of rejected flags
+    
+    plt.figure(figsize=(8, 4))
+    plt.bar(range(len(accepted)), accepted, color='#0D8D39', label='Accepted')
+    plt.bar(range(len(rejected)), rejected, color='#55A5C0', label='Rejected')
+
+    plt.xlabel('Ticks')
+    plt.ylabel('Number of flags')
+    plt.title(f"Flags statistics for {type} {value} from {t1.strftime('%H:%M')} to {t2.strftime('%H:%M')}")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+
+    render_title = f"Flags statistics for {type} {value} from {t1.strftime('%H:%M')} to {t2.strftime('%H:%M')}"
+    return render_template('stats.html', image=base64.b64encode(img.read()).decode('utf-8'), denied_info=denied_info, render_title=render_title)
+    
+
+
 
 # -----------------------------------------------------------------------------------
 # Background task
@@ -253,10 +349,18 @@ def submit_flags():
         else:
             logging.info(f"\t\tI'm submitting {len(flags)} flags...")
         
+        if configuration["flagServer"]["debug"]:
+            url = "http://localhost:5000/debug"
+        else:
+            url = "http://{ip}:{port}{api_endpoint}".format(ip=configuration["flagServer"]["ip"], port=configuration["flagServer"]["port"], api_endpoint=configuration["flagServer"]["api_endpoint"])
+        
         accepted_flags = 0
-        url = "http://{ip}:{port}{api_endpoint}".format(ip=configuration["flagServer"]["ip"], port=configuration["flagServer"]["port"], api_endpoint=configuration["flagServer"]["api_endpoint"])
         result = requests.put(url, headers={'X-Team-Token': configuration["flagServer"]["team_token"]}, json=flags).text
         result = json.loads(result)
+        if result == {'code': 'GAME_ENDED', 'message': '[GAME_ENDED] Game ended'}:
+            logging.info("\t\tGame has ended")
+            return
+        
         for res in result:
             if 'Accepted' in res['msg']:
                 status = ACCEPTED

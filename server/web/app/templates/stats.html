@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ render_title }}</title>
+    <!-- Setting favicon -->
+    <link rel="icon" href="static/favicon.ico" type="image/x-icon">
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+    <center><a href="/"><img src="static/logo.png" alt="Logo" style="width:60%;"></a></center>
+    <div class="container">
+        <center><img src="data:image/png;base64,{{ image }}" alt="Flags Statistics"></center>
+        </div>
+
+<div class="container">
+    <h1>Rejected flags info</h1>
+
+    <div class="input-group mb-3">
+        <input type="text" id="searchInput" class="form-control" placeholder="Search...">
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Flag</th>
+            <th>Message</th>
+        </tr>
+        </thead>
+        <tbody id="tableBody">
+        <!-- Loop through the data provided by Jinja2 -->
+        {% for flag, message in denied_info.items() %}
+        <tr>
+            <td>{{ flag }}</td>
+            <td>{{ message }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Bootstrap JS and jQuery (needed for Bootstrap) -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#searchInput').on('input', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            $('#tableBody tr').each(function() {
+                var flagText = $(this).find('td:first').text().toLowerCase();
+                var messageText = $(this).find('td:nth-child(2)').text().toLowerCase();
+                if (flagText.includes(searchTerm) || messageText.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>
