@@ -7,14 +7,23 @@ import random
 import string
 
 #------------------------------------------------------------------------------
-# Exploit function
+# Exploit settings
 #------------------------------------------------------------------------------
 # ATTENTION
 # EDIT THEESE PARAMETERS TO MATCH THE SERVICE YOU'RE EXPLOITING
 # THIS INFORMATION WILL BE USED TO RECORD STATISTICS ON THE SERVER
+#------------------------------------------------------------------------------
 
 SERVICE = "Example"             # Service you're exploiting
 EXPLOIT = "Peaceful Farm"       # Name of your exploit
+
+# -------------------------------------------------------------------------
+# Set this to True to test your exploit on the NOP team.
+# This will not submit flags to the server and will only print
+# the extracted flags.
+# -------------------------------------------------------------------------
+
+DEBUG = False                   
 
 def exploit(target_ip : str) -> list[str]:
     flags = set()
@@ -28,8 +37,19 @@ def exploit(target_ip : str) -> list[str]:
     # flags.add(flag)
     # -------------------------------------------------------------------------
     # Useful functions:
+    # 
     # - generate_random_string  Generates a random string of a given length
+    #   Arguments:
+    #       length: int, the length of the string to generate
+    #       include_symbols: bool, whether to include symbols in the string
+    #       valid_set: str, the set of characters to choose from
+    #
     # - random_napolify         Generates a random string with a Napoli theme
+    #   Arguments:
+    #       length: int, the length of the string to generate
+    #       blacklist: str, a string containing characters to avoid in the output
+    #       stronger_leet: bool, whether to apply stronger leet transformations
+    #
     # -------------------------------------------------------------------------
     # Have fun!
     # -------------------------------------------------------------------------
@@ -242,7 +262,11 @@ def submit_flags(flags : list[str]):
 #------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    # Generate target ip list
+
+    if DEBUG:
+        print("Exploited flags from NOP team:\n{extracted_flags}".format(extracted_flags=exploit(f"10.60.{NOP_TEAM_ID}.1")))
+        exit(0)
+    
     target_ip_list = [f"10.60.{i}.1" for i in range(N_TEAMS, 0, -1) if i != NOP_TEAM_ID and i != TEAM_ID]
 
     futures = []
