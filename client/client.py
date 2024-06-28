@@ -36,13 +36,15 @@ def exploit(target_ip : str) -> list[str]:
     # -------------------------------------------------------------------------
     # Useful functions:
     # 
-    # - generate_random_string  Generates a random string of a given length
+    # - generate_random_string 
+    #   Generates a random string of a given length
     #   Arguments:
     #       length: int, the length of the string to generate
     #       include_symbols: bool, whether to include symbols in the string
     #       valid_set: str, the set of characters to choose from
     #
-    # - random_napolify         Generates a random string with a Napoli theme
+    # - random_napolify         
+    #   Generates a random string with a Napoli theme
     #   Arguments:
     #       length: int, the length of the string to generate
     #       blacklist: str, a string containing characters to avoid in the output
