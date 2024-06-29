@@ -387,6 +387,17 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     print(banner)
 
+    print("Starting the web server...")
+    print("Connecting to the database...")
+    with app.app_context():
+        while True:
+            try:
+                mysql.connection.ping()
+                print("Connection established")
+                break
+            except Exception as e:
+                time.sleep(1)
+
     # Initialize the database with the schema
     with app.app_context():
         cur = mysql.connection.cursor()
@@ -406,4 +417,4 @@ if __name__ == '__main__':
     thread.daemon = True
     thread.start()
     
-    app.run(debug=False, host="0.0.0.0")
+    app.run(debug=True, host="0.0.0.0")

@@ -1,6 +1,13 @@
 # Usa un'immagine di base con Python
 FROM python:3.9
 
+# Installa tzdata per la configurazione del fuso orario
+RUN apt-get update && apt-get install -y tzdata
+
+# Imposta il fuso orario (sostituisci "Europe/Rome" con il fuso orario corretto se necessario)
+ENV TZ=Europe/Rome
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # Imposta la directory di lavoro all'interno del container
 WORKDIR /app
 
@@ -10,7 +17,7 @@ COPY requirements.txt .
 # Installa i pacchetti elencati nel file requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Cancello il file requirements.txt
+# Cancella il file requirements.txt
 RUN rm requirements.txt
 
 # Copia il codice dell'applicazione nella directory di lavoro
