@@ -55,12 +55,12 @@ def exploit(target_ip : str) -> list[str]:
     # -------------------------------------------------------------------------
 
     # Don't touch this, it will return only valid flags
-    return set([i for i in flags if re.match(FLAG_REGEX, i)])
+    return target_ip, set([i for i in flags if re.match(FLAG_REGEX, i)])
 
 #------------------------------------------------------------------------------
 # Peaceful Farm settings
 #------------------------------------------------------------------------------
-SERVER_IP = "127.0.0.1"         # Peaceful Farm server IP
+SERVER_IP = "10.81.39.2"         # Peaceful Farm server IP
 SERVER_PORT = "5000"            # Peaceful Farm server port
 API_KEY = "1234567890"          # Peaceful Farm API key
 NICKNAME = os.getenv('USER') or os.getenv('USERNAME') or "Peaceful Farmer"
@@ -243,17 +243,21 @@ def random_napolify(length : int, blacklist : str = "", stronger_leet = False) -
 # Submit flags
 #------------------------------------------------------------------------------
 
-def submit_flags(flags : list[str]):
-    if not flags:
+def submit_flags(flags : dict[str, set]):
+    if len(flags) == 0:
         return
+    
+    for key, value in flags.items():
+        flags[key] = list(value)
     
     json = {
         "api_key": API_KEY,
-        "flags": list(flags),
+        "flags": flags,
         "exploit": EXPLOIT,
         "service": SERVICE,
         "nickname": NICKNAME
     }
+    
     response = requests.post(f"http://{SERVER_IP}:{SERVER_PORT}/flags", json=json)
     print(f"Server: {response.text}")
 
@@ -270,7 +274,7 @@ if __name__ == '__main__':
     target_ip_list = [f"10.60.{i}.1" for i in range(N_TEAMS, 0, -1) if i != NOP_TEAM_ID and i != TEAM_ID]
 
     futures = []
-    flags = set()
+    flags = dict()
     now = time.time()
     with ThreadPoolExecutor() as pool:
         try:
@@ -282,7 +286,10 @@ if __name__ == '__main__':
                     for future, ip in futures:
                         if ip == target_ip:
                             if future.done():
-                                flags = flags.union(future.result())
+                                exploited_ip, exploited_flags = future.result()
+                                if flags.get(exploited_ip) is None:
+                                    flags[exploited_ip] = set()
+                                flags[exploited_ip] = flags[exploited_ip].union(exploited_flags)
                                 futures.remove((future, ip))
                             else:
                                 break
@@ -291,7 +298,7 @@ if __name__ == '__main__':
 
                 if time.time() - now > SUBMIT_TIME:
                     submit_flags(flags)
-                    flags = set()
+                    flags = dict()
                     now = time.time()
 
         except KeyboardInterrupt:  # CTRL+C

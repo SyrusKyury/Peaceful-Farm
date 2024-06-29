@@ -1,6 +1,7 @@
 version: '3'
 services:
   db:
+    container_name: Peaceful-Farm-DB
     image: mysql:5.7
     restart: always
     environment:
@@ -13,6 +14,7 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   web:
+    container_name: Peaceful-Farm
     build: ./web
     restart: always
     ports:

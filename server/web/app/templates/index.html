@@ -8,6 +8,11 @@
   <link rel="icon" href="static/favicon.ico" type="image/x-icon">
   <!-- Bootstrap CSS -->
   <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .cursor-pointer {
+      cursor: pointer;
+    }
+  </style>
   <center><a href="/"><img src="static/logo.png" alt="Logo" style="width:60%;"></a></center>
 
 </head>
@@ -31,6 +36,7 @@
                 <option value="exploit">Exploit</option>
                 <option value="nickname">Attacker Nickname</option>
                 <option value="service">Service Name</option>
+                <option value="ip">IP Address</option>
               </select>
             </div>
           </div>
@@ -43,6 +49,41 @@
             </div>
           </div>
         </form>
+        <br>
+        <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+          Add a flag manually
+        </button>
+        <br><br>
+        <div class="collapse" id="collapseExample">
+          <form id="hiddenForm">
+            <div class="form-row">
+              <div class="col-md-3 mb-3">
+                <label for="ipAddress">IP Address:</label>
+                <input type="text" class="form-control" id="ipAddress" name="ipAddress">
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="exploit">Exploit:</label>
+                <input type="text" class="form-control" id="exploit" name="exploit">
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="service">Service:</label>
+                <input type="text" class="form-control" id="service" name="service">
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="nickname">Nickname:</label>
+                <input type="text" class="form-control" id="nickname" name="nickname">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="col">
+                <label for="flag">Flag:</label>
+                <input type="text" class="form-control" id="flag" name="flag">
+              </div>
+            </div>
+            <!-- Updated: Adding ID to submit button -->
+            <button type="button" id="submitFlag" class="btn btn-primary mt-3">Submit</button>
+          </form>
+        </div>
       </div>
     </div>
     <div class="row mt-4">
@@ -61,54 +102,161 @@
   <!-- Bootstrap JS and jQuery (needed for Bootstrap) -->
   <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-  
+
   <!-- JavaScript to handle form submission and table rendering -->
   <script>
-    // Event listener for form submission
     document.getElementById('searchForm').addEventListener('submit', function(event) {
-    event.preventDefault(); // Prevent the form from submitting
+      event.preventDefault(); // Prevent the form from submitting
 
-    // Fetch form values
-    var startTime = document.getElementById('startTime').value;
-    var endTime = document.getElementById('endTime').value;
-    var filteredGroup = document.getElementById('filteredGroup').value;
-    var data;
-    console.log(startTime, endTime, filteredGroup);
+      // Fetch form values
+      var startTime = document.getElementById('startTime').value;
+      var endTime = document.getElementById('endTime').value;
+      var filteredGroup = document.getElementById('filteredGroup').value;
+      var data;
 
-    // Preparing the data to be sent to the server with a GET request
-    var url = '/filter?t1=' + startTime + '&t2=' + endTime + '&group=' + filteredGroup;
+      // Preparing the data to be sent to the server with a GET request
+      var url = '/filter?t1=' + startTime + '&t2=' + endTime + '&group=' + filteredGroup;
 
-    fetch(url)
+      fetch(url)
         .then(response => response.json())
         .then(response => {
-            data = response;
+          data = response;
         }).then(() => {
+          // Render table rows based on fetched data
+          var resultsBody = document.getElementById('resultsBody');
+          resultsBody.innerHTML = ''; // Clear existing rows
 
-            // Render table rows based on fetched data
-            var resultsBody = document.getElementById('resultsBody');
-            resultsBody.innerHTML = ''; // Clear existing rows
-            console.log(data);
-            // Setting column names
-            var row = document.createElement('tr');
-            row.innerHTML = '<th>' + filteredGroup.toUpperCase() + '</th><th>DENIED FLAGS</th><th>ACCEPTED FLAGS</th><th>PENDING FLAGS</th>';
-            resultsBody.appendChild(row);
+          // Setting column names
+          var headerRow = document.createElement('tr');
+          headerRow.innerHTML = '<th class="sortable"><span class="cursor-pointer" data-column="0">' + filteredGroup.toUpperCase() + '</span></th><th class="sortable"><span class="cursor-pointer" data-column="1">ACCEPTED FLAGS</span></th><th class="sortable"><span class="cursor-pointer" data-column="2">REJECTED FLAGS</span></th><th class="sortable"><span class="cursor-pointer" data-column="3">PENDING FLAGS</span></th>';
+          resultsBody.appendChild(headerRow);
 
-            var search_value = document.getElementById('search_value').value.toUpperCase();
-            data.forEach(function(item) {
-                // Check if search_value is empty or if the item contains the search_value
-                if (search_value === '' || item[0].toUpperCase().includes(search_value))
-                {
-                  var row = document.createElement('tr');
-                  first_item = '<td><a href="/stats?type=' + filteredGroup + '&value=' + item[0] + '&t1=' + startTime + '&t2=' + endTime + '">' + item[0] + '</a></td>'
-                  row.innerHTML = first_item + '<td>' + item[1] + '</td><td>' + item[2] + '</td><td>' + item[3] + '</td>';
-                  resultsBody.appendChild(row);
-                }
+
+          var search_value = document.getElementById('search_value').value.toUpperCase();
+          data.forEach(function(item) {
+            // Check if search_value is empty or if the item contains the search_value
+            if (search_value === '' || item[0].toUpperCase().includes(search_value)) {
+              var row = document.createElement('tr');
+              row.innerHTML = '<td><a href="/stats?type=' + filteredGroup + '&value=' + item[0] + '&t1=' + startTime + '&t2=' + endTime + '">' + item[0] + '</a></td><td>' + item[1] + '</td><td>' + item[2] + '</td><td>' + item[3] + '</td>';
+              resultsBody.appendChild(row);
+            }
+          });
+
+          sortTable(0); // Call sorting function initially
+
+          // Function to handle column sorting
+          function sortTable(column) {
+            var sortOrder = -1;
+            if (resultsBody.dataset.sortOrder === 'desc') {
+              sortOrder = 1;
+              resultsBody.dataset.sortOrder = 'asc';
+            } else {
+              resultsBody.dataset.sortOrder = 'desc';
+            }
+
+            data.sort(function(a, b) {
+              var ipA = a[0];  // Assuming IP address is in the first column of your data array
+              var ipB = b[0];
+
+              // Split IP addresses into segments
+              var segmentsA = ipA.split('.').map(Number);
+              var segmentsB = ipB.split('.').map(Number);
+
+              // Compare segments numerically from left to right
+              for (var i = 0; i < 4; i++) {  // Assuming IPv4 addresses
+                if (segmentsA[i] < segmentsB[i]) return 1 * sortOrder;
+                if (segmentsA[i] > segmentsB[i]) return -1 * sortOrder;
+              }
+              return 0;
             });
 
+            // Re-render table rows
+            resultsBody.innerHTML = ''; // Clear existing rows
+            resultsBody.appendChild(headerRow); // Re-add header row
+            data.forEach(function(item) {
+              if (search_value === '' || item[0].toUpperCase().includes(search_value)) {
+                var row = document.createElement('tr');
+                row.innerHTML = '<td><a href="/stats?type=' + filteredGroup + '&value=' + item[0] + '&t1=' + startTime + '&t2=' + endTime + '">' + item[0] + '</a></td><td>' + item[1] + '</td><td>' + item[2] + '</td><td>' + item[3] + '</td>';
+                resultsBody.appendChild(row);
+              }
+            });
+          }
+
+          // Event listeners for column headers to enable sorting
+          document.querySelectorAll('.sortable span').forEach(function(span) {
+            span.addEventListener('click', function() {
+              var column = parseInt(this.getAttribute('data-column'));
+              sortTable(column);
+            });
+          });
 
         });
+    });
 
-});
-</script>
+      // Function to handle manual flag submission
+      document.getElementById('submitFlag').addEventListener('click', function() {
+      // Fetch data from form inputs
+      var ipAddress = document.getElementById('ipAddress').value;
+      var exploit = document.getElementById('exploit').value;
+      var service = document.getElementById('service').value;
+      var nickname = document.getElementById('nickname').value;
+      var flag = document.getElementById('flag').value;
+
+      var flag_regex = /{{flag_regex}}/;
+      console.log(ipAddress);
+
+      // Example of using the fetched data
+      exploit = exploit;
+      service = service;
+      nickname = nickname;
+      flags = {};
+      flags[ipAddress] = [flag];
+      api_key = "{{ api_key }}";
+
+      //print(flags);
+      console.log(JSON.stringify(flags));
+
+      // Check if the flag matches the expected format
+      if (!flag.match(flag_regex)) {
+        alert('Invalid flag format');
+        return;
+      }
+
+      // Check if the IP address matches the expected format
+      ip_address_regex = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/
+      if (!ipAddress.match(ip_address_regex)) {
+        alert('Invalid IP address format');
+        return;
+      }
+
+      // Send the data to the server
+      
+      fetch('/flags', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          flags: flags,
+          exploit: exploit,
+          service: service,
+          nickname: nickname,
+          api_key: api_key
+        })
+      }).then(response => {
+        if (response.ok) {
+          alert('Flag submitted successfully');
+        } else {
+          alert('The flag is not valid or has already been submitted');
+        }
+      }).catch(error => {
+        // Handle error
+        alert('An error occurred. Please try again later.');
+        console.log(error);
+      });
+    });
+
+  </script>
+
 </body>
 </html>

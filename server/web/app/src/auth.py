@@ -1,4 +1,4 @@
-from flask import request, Response
+from flask import request, Response, render_template
 from src.config import configuration
 
 def check_auth(username, password):
@@ -9,10 +9,8 @@ def check_auth(username, password):
     return False
 
 def authenticate():
-    return Response(
-        'You need to login to access this resource', 401,
-        {'WWW-Authenticate': 'Basic realm="Login Required"'}
-    )
+    return render_template('403.html'), 401, {'WWW-Authenticate': 'Basic realm="Login Required"'}
+
 
 def requires_auth(f):
     def decorated(*args, **kwargs):

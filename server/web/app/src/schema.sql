@@ -14,6 +14,7 @@ CREATE TABLE flags (
     service VARCHAR(255) NOT NULL,
     exploit VARCHAR(255) NOT NULL,
     nickname VARCHAR(255) NOT NULL,
+    ip VARCHAR(255) NOT NULL,
     date TIMESTAMP NOT NULL,
     status INT NOT NULL,
     message TEXT

@@ -1,4 +1,4 @@
-from flask import Flask, request, g, render_template, jsonify, send_file
+from flask import Flask, request, render_template, jsonify
 from src.auth import requires_auth, requires_api_key
 from src.config import banner, configuration
 import matplotlib.pyplot as plt
@@ -33,8 +33,8 @@ REJECTED = 2
 
 @app.route('/')
 @requires_auth
-def public_page():
-    return render_template('index.html')
+def index():
+    return render_template('index.html', api_key=configuration['client_settings']['api_key'], flag_regex=configuration['client_settings']['flag_regex'])
 
 # -------------------------------------------------------------
 # Api to submit flags to the database
@@ -47,10 +47,11 @@ def flags():
         Request body:
         {
             "api_key": "string",    # Your API key
-            "flags": [              # List of flags you want to submit      
-                "string", 
-                ...
-            ],
+            "flags": {
+            "ip1" : ["string"],      # List of flags [flag1, flag2, flag3, ...
+            "ip2" : ["string"],      # List of flags [flag1, flag2, flag3, ...
+            ...
+            },
             "exploit": "string",    # Name of your exploit
             "service": "string",    # Service you're exploiting
             "nickname": "string"    # Your nickname
@@ -72,28 +73,31 @@ def flags():
     if 'nickname' not in data.keys() or not data['nickname']:
         return "No nickname provided", 400
     
-    service = data['service'].upper()
-    exploit = data['exploit'].upper()
-    nickname = data['nickname'].upper()
+    # Data sanitization
+    service = data['service'].upper().replace("'", "''")
+    exploit = data['exploit'].upper().replace("'", "''")
+    nickname = data['nickname'].upper().replace("'", "''")
     message = None
     status = PENDING
 
     cursor = mysql.connection.cursor()
     new_flags = 0
-    for flag in data['flags']:
-        try:
-            cursor.execute('''INSERT INTO flags (flag, service, exploit, nickname, date, status, message) 
-                           VALUES (%s, %s, %s, %s, %s, %s, %s)''',
-                           (flag, service, exploit, nickname, datetime.now(), status, message))
-            new_flags += 1
-        except:
-            pass
+    flag_dictionary = data['flags']
+    for ip, flag_list in flag_dictionary.items():
+        for flag in flag_list:
+            try:
+                cursor.execute('''INSERT INTO flags (flag, service, exploit, nickname, ip, date, status, message) 
+                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
+                               (flag, service, exploit, nickname, ip, datetime.now(), status, message))
+                new_flags += 1
+            except:
+                pass
 
     mysql.connection.commit()
     cursor.close()
 
     if new_flags == 0:
-        return "I've tried to insert the provided flags, but they already exist", 200
+        return "I've tried to insert the provided flags, but they already exist", 400
     else:
         return "Flags inserted: " + str(new_flags), 201
 
@@ -132,7 +136,7 @@ def filter():
 
     t1 = data['t1'] if data['t1'] else "00:00"                  # HH:MM
     t2 = data['t2'] if data['t2'] else "23:59"                  # HH:MM
-    group = data['group'].lower()                       # group by column
+    group = data['group'].lower()                               # group by column
 
     t1 = datetime.now().replace(hour=int(t1.split(":")[0]), minute=int(t1.split(":")[1]))
     t2 = datetime.now().replace(hour=int(t2.split(":")[0]), minute=int(t2.split(":")[1]))
@@ -183,15 +187,19 @@ def test():
 # Statistics endpoint
 # -------------------------------------------------------------
 @app.route('/stats', methods=['GET'])
+@requires_auth
 def stats():
     data = request.args
     t1 = data['t1'] if data['t1'] else "00:00"                  # HH:MM
     t2 = data['t2'] if data['t2'] else "23:59"                  # HH:MM
-    type = data['type'].upper() if data['type'] else "EXPLOIT"
+    type = data['type'].upper() if data['type'] else None
     value = data['value'].upper() if data['value'] else None
 
     if not value:
         return "No value provided", 400
+    
+    if not type:
+        return "No type provided", 400
 
 
 
@@ -266,14 +274,10 @@ def stats():
 
     render_title = f"Flags statistics for {type} {value} from {t1.strftime('%H:%M')} to {t2.strftime('%H:%M')}"
     return render_template('stats.html', image=base64.b64encode(img.read()).decode('utf-8'), denied_info=denied_info, render_title=render_title)
-    
-
-
 
 # -----------------------------------------------------------------------------------
 # Background task
 # -----------------------------------------------------------------------------------
-
 def timestamp():
     return datetime.now().time().replace(microsecond=0)
 
