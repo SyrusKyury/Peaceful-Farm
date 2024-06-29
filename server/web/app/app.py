@@ -367,7 +367,7 @@ def submit_flags():
                 accepted_flags += 1
             else:
                 status = REJECTED
-            cur.execute('''UPDATE flags SET status = %s, message = %s WHERE flag = %s''', (status, res['msg'], res['flag']))
+            cur.execute('''UPDATE flags SET status = %s, message = %s WHERE flag = %s AND status = %s''', (status, res['msg'], res['flag'], str(PENDING)))
 
         mysql.connection.commit()
         cur.close()
