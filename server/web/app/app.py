@@ -413,8 +413,7 @@ if __name__ == '__main__':
 
     # Start the background task in a separate thread but with higher priority
     thread = threading.Thread(target=background_task)
-    thread = threading.Thread(target=background_task)
     thread.daemon = True
     thread.start()
     
-    app.run(debug=True, host="0.0.0.0")
+    app.run(debug=False, host="0.0.0.0")
