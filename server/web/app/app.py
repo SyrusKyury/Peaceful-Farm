@@ -12,14 +12,15 @@ import json
 import logging
 import io
 import base64
+import os
 
 # ----------------- Flask App -----------------
 
 app = Flask(__name__)
 app.config['MYSQL_HOST'] = 'db'
-app.config['MYSQL_USER'] = 'napoli'
-app.config['MYSQL_PASSWORD'] = 'forza_napoli'
-app.config['MYSQL_DB'] = 'cyber_challenge'
+app.config['MYSQL_USER'] = os.getenv('MYSQL_USER')
+app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD')
+app.config['MYSQL_DB'] = os.getenv('MYSQL_DATABASE')
 mysql = MySQL(app)
 
 # ----------------- Constants -----------------
