@@ -50,9 +50,22 @@
           </div>
         </form>
         <br>
-        <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
-          Add a flag manually
-        </button>
+        <div class="d-flex justify-content-between">
+          <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+            Add a flag manually
+          </button>
+          
+          <!-- Add a green button-->
+          <div>
+          <button class="btn btn-success" type="button" aria-expanded="false" onclick="window.location.href = '/flags'">
+            Download .csv report
+          </button>
+          <button class="btn btn-danger" type="button" aria-expanded="false" onclick="window.location.href = '/client'">
+            Download exploit client
+          </button>
+          </div>
+        </div>
+
         <br><br>
         <div class="collapse" id="collapseExample">
           <form id="hiddenForm">
@@ -105,6 +118,8 @@
 
   <!-- JavaScript to handle form submission and table rendering -->
   <script>
+
+
     document.getElementById('searchForm').addEventListener('submit', function(event) {
       event.preventDefault(); // Prevent the form from submitting
 

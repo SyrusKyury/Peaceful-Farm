@@ -14,11 +14,12 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   web:
-    container_name: Peaceful-Farm
+    container_name: Peaceful-Farm-WEB
+    image: peaceful-farm
     build: ./web
     restart: always
     ports:
-      - 5000:5000
+      - ${PEACEFUL_FARM_SERVER_PORT}:${PEACEFUL_FARM_SERVER_PORT}
     volumes:
       - ./web/app:/app:rw
     depends_on:
@@ -27,3 +28,19 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      SUBMISSION_SERVER_IP: ${SUBMISSION_SERVER_IP}
+      SUBMISSION_SERVER_PORT: ${SUBMISSION_SERVER_PORT}
+      SUBMISSION_SERVER_API_ENDPOINT: ${SUBMISSION_SERVER_API_ENDPOINT}
+      SUBMISSION_SERVER_TEAM_TOKEN: ${SUBMISSION_SERVER_TEAM_TOKEN}
+      GAME_TICK_DURATION: ${GAME_TICK_DURATION}
+      FLAGS_SUBMISSION_WINDOW: ${FLAGS_SUBMISSION_WINDOW}
+      COMPETITION_START_TIME: ${COMPETITION_START_TIME}
+      REQUIRE_AUTHENTICATION: ${REQUIRE_AUTHENTICATION}
+      ACCOUNTS: ${ACCOUNTS}
+      API_KEY: ${API_KEY}
+      FLAG_REGEX: ${FLAG_REGEX}
+      N_TEAMS: ${N_TEAMS}
+      TEAM_ID: ${TEAM_ID}
+      NOP_TEAM_ID: ${NOP_TEAM_ID}
+      SUBMIT_TIME: ${SUBMIT_TIME}
+      PEACEFUL_FARM_SERVER_PORT: ${PEACEFUL_FARM_SERVER_PORT}

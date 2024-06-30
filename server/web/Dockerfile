@@ -5,8 +5,7 @@ FROM python:3.9
 RUN apt-get update && apt-get install -y tzdata
 
 # Imposta il fuso orario (sostituisci "Europe/Rome" con il fuso orario corretto se necessario)
-ENV TZ=Europe/Rome
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime && echo $TIMEZONE > /etc/timezone
 
 # Imposta la directory di lavoro all'interno del container
 WORKDIR /app

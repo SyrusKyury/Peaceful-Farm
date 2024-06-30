@@ -1,6 +1,6 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify, Response
 from src.auth import requires_auth, requires_api_key
-from src.config import banner, configuration
+from src.config import *
 import matplotlib.pyplot as plt
 from flask_mysqldb import MySQL
 import random
@@ -12,15 +12,15 @@ import json
 import logging
 import io
 import base64
-import os
+import src.utils as utils
 
 # ----------------- Flask App -----------------
 
 app = Flask(__name__)
 app.config['MYSQL_HOST'] = 'db'
-app.config['MYSQL_USER'] = os.getenv('MYSQL_USER')
-app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD')
-app.config['MYSQL_DB'] = os.getenv('MYSQL_DATABASE')
+app.config['MYSQL_USER'] = MYSQL_USER
+app.config['MYSQL_PASSWORD'] = MYSQL_PASSWORD
+app.config['MYSQL_DB'] = MYSQL_DATABASE
 mysql = MySQL(app)
 
 # ----------------- Constants -----------------
@@ -35,7 +35,7 @@ REJECTED = 2
 @app.route('/')
 @requires_auth
 def index():
-    return render_template('index.html', api_key=configuration['client_settings']['api_key'], flag_regex=configuration['client_settings']['flag_regex'])
+    return render_template('index.html', api_key=API_KEY, flag_regex=FLAG_REGEX)
 
 # -------------------------------------------------------------
 # Api to submit flags to the database
@@ -60,7 +60,7 @@ def flags():
     """
     # Getting the request data
     data = request.json
-    print(f"Received {len(data['flags'])} flags from {data['nickname']} for {data['service']} using {data['exploit']}")
+    logging.info(f"Received {len(data['flags'])} flags from {data['nickname']} for {data['service']} using {data['exploit']}")
     
     if 'flags' not in data.keys() or not data['flags']:
         return "No flags provided", 400
@@ -113,7 +113,13 @@ def get_flags():
     cursor.execute('''SELECT * FROM flags''')
     flags = cursor.fetchall()
     cursor.close()
-    return {'flags': flags}
+    # Return the flags as a csv file
+    csv = "flag,service,exploit,nickname,ip,date,status,message\n"
+    for flag in flags:
+        csv += f"'{flag[0]}','{flag[1]}','{flag[2]}','{flag[3]}','{flag[4]}','{flag[5]}','{flag[6]}','{flag[7]}'\n"
+    
+    report_name = f"PF_report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+    return Response(csv, mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename={report_name}"})
 
 # -------------------------------------------------------------
 # Filter
@@ -158,6 +164,26 @@ def filter():
     result = cursor.fetchall()
     cursor.close()
     return jsonify(result), 200
+
+# -------------------------------------------------------------
+# Download client.py
+# -------------------------------------------------------------
+@app.route('/client', methods=['GET'])
+@requires_auth
+def client():
+    exploit_name = utils.generate_exploit_name()
+    server_ip = request.host.split(":")[0]
+    server_port = request.host.split(":")[1]
+    api_key = API_KEY
+    n_teams = N_TEAMS
+    team_id = TEAM_ID
+    nop_team_id = NOP_TEAM_ID
+    flag_regex = FLAG_REGEX
+    submit_time = SUBMIT_TIME
+    client = CLIENT_TEMPLATE % (exploit_name, server_ip, server_port, api_key, n_teams, team_id, nop_team_id, flag_regex, submit_time)
+
+    # Return the client.py file and start the download
+    return Response(client, mimetype="text/plain", headers={"Content-Disposition": "attachment;filename=client.py"})
 
 # -------------------------------------------------------------
 # Test endpoint
@@ -227,7 +253,7 @@ def stats():
     while fetch_result_list:
         fetch_result = fetch_result_list.pop(0)
         start_time = fetch_result[1]
-        end_time = start_time + timedelta(seconds=configuration["flagServer"]["game_tick_duration"])
+        end_time = start_time + timedelta(seconds=GAME_TICK_DURATION)
         accepted_count = 0
         rejected_count = 0
         pending_count = 0
@@ -251,28 +277,36 @@ def stats():
         rejected.append(rejected_count)
         pending.append(pending_count)
     
-   
+
     # Plotting a function of the number of flags for each interval
     # The x-axis represents the time intervals
     # The y-axis represents the number of flags
     # The #0D8D39 bars represent the number of accepted flags
     # The #55A5C0 bars represent the number of rejected flags
-    
-    plt.figure(figsize=(8, 4))
-    plt.bar(range(len(accepted)), accepted, color='#0D8D39', label='Accepted')
-    plt.bar(range(len(rejected)), rejected, color='#55A5C0', label='Rejected')
 
+    n = len(accepted)
+    x = range(n)
+
+    # Bar width
+    width = 0.35
+
+    # Plotting
+    plt.figure(figsize=(10, 5))
+    plt.bar(x, accepted, width, color='#0D8D39', label='Accepted')
+    plt.bar([i + width for i in x], rejected, width, color='#55A5C0', label='Rejected')
+
+    # Setting the x-axis labels
     plt.xlabel('Ticks')
     plt.ylabel('Number of flags')
     plt.title(f"Flags statistics for {type} {value} from {t1.strftime('%H:%M')} to {t2.strftime('%H:%M')}")
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    
+
+    # Saving the plot to a buffer
     img = io.BytesIO()
     plt.savefig(img, format='png')
     img.seek(0)
-
     render_title = f"Flags statistics for {type} {value} from {t1.strftime('%H:%M')} to {t2.strftime('%H:%M')}"
     return render_template('stats.html', image=base64.b64encode(img.read()).decode('utf-8'), denied_info=denied_info, render_title=render_title)
 
@@ -286,13 +320,10 @@ def timestamp():
 # Background task
 # -----------------------------------------------------------------------------------
 
-GAMETICK_DURATION = configuration["flagServer"]["game_tick_duration"]
-FLAGS_SUBMISSION_WINDOW = configuration["flagServer"]["flags_submission_window"]
-
 def background_task():
-    game_start = datetime.now().replace(hour=11, minute=0, second=0, microsecond=0)
+    game_start = datetime.now().replace(hour=COMPETITION_START_TIME[0], minute=COMPETITION_START_TIME[1], second=COMPETITION_START_TIME[2], microsecond=0)
     seconds_since_gamestart: float = (datetime.now() - game_start).total_seconds()
-    current_round: int = 1 + seconds_since_gamestart // GAMETICK_DURATION
+    current_round: int = 1 + seconds_since_gamestart // GAME_TICK_DURATION
 
     logging.info("\t\t" + "-"*50)
     logging.info("\t\tGame information")
@@ -309,7 +340,7 @@ def background_task():
         logging.info("\t\tGame started")
 
     while True:
-        next_round_seconds_offset = GAMETICK_DURATION * current_round
+        next_round_seconds_offset = GAME_TICK_DURATION * current_round
         minutes, seconds = divmod(next_round_seconds_offset, 60)
         hours, minutes = divmod(minutes, 60)
         next_round_diff: float = timedelta(
@@ -354,13 +385,13 @@ def submit_flags():
         else:
             logging.info(f"\t\tI'm submitting {len(flags)} flags...")
         
-        if configuration["flagServer"]["debug"]:
-            url = "http://localhost:5000/debug"
+        if FLAGS_SUBMISSION_DEBUG:
+            url = f"http://localhost:{PEACEFUL_FARM_SERVER_PORT}/debug"
         else:
-            url = "http://{ip}:{port}{api_endpoint}".format(ip=configuration["flagServer"]["ip"], port=configuration["flagServer"]["port"], api_endpoint=configuration["flagServer"]["api_endpoint"])
+            url = "http://{ip}:{port}{api_endpoint}".format(ip=SUBMISSION_SERVER_IP, port=SUBMISSION_SERVER_PORT, api_endpoint=SUBMISSION_SERVER_API_ENDPOINT)
         
         accepted_flags = 0
-        result = requests.put(url, headers={'X-Team-Token': configuration["flagServer"]["team_token"]}, json=flags).text
+        result = requests.put(url, headers={'X-Team-Token': SUBMISSION_SERVER_TEAM_TOKEN}, json=flags).text
         result = json.loads(result)
         if result == {'code': 'GAME_ENDED', 'message': '[GAME_ENDED] Game ended'}:
             logging.info("\t\tGame has ended")
@@ -391,6 +422,9 @@ def submit_flags():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     print(banner)
+    print("Starting the Peaceful Farm server...")
+    print("Starting time: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    print(settings_feedback)
 
     print("Starting the web server...")
     print("Connecting to the database...")
@@ -421,4 +455,4 @@ if __name__ == '__main__':
     thread.daemon = True
     thread.start()
     
-    app.run(debug=False, host="0.0.0.0")
+    app.run(debug=FLASK_DEBUG, host="0.0.0.0", port=PEACEFUL_FARM_SERVER_PORT)
