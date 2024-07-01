@@ -111,3 +111,10 @@ Server started with the following settings:
 
 - PEACEFUL_FARM_SERVER_PORT: {PEACEFUL_FARM_SERVER_PORT}
 """
+
+# ------------------------------------------------------------------------------
+# Constants
+# ------------------------------------------------------------------------------
+PENDING = 0
+ACCEPTED = 1
+REJECTED = 2

@@ -14,7 +14,9 @@ import io
 import base64
 import src.utils as utils
 
-# ----------------- Flask App -----------------
+# -------------------------------------------------------------
+# Flask app
+# -------------------------------------------------------------
 
 app = Flask(__name__)
 app.config['MYSQL_HOST'] = 'db'
@@ -23,15 +25,11 @@ app.config['MYSQL_PASSWORD'] = MYSQL_PASSWORD
 app.config['MYSQL_DB'] = MYSQL_DATABASE
 mysql = MySQL(app)
 
-# ----------------- Constants -----------------
-
-PENDING = 0
-ACCEPTED = 1
-REJECTED = 2
-
-# ---------------------------------------------
-
-
+# -------------------------------------------------------------
+# Routes
+# -------------------------------------------------------------
+# Index route
+# -------------------------------------------------------------
 @app.route('/')
 @requires_auth
 def index():
@@ -40,7 +38,6 @@ def index():
 # -------------------------------------------------------------
 # Api to submit flags to the database
 # -------------------------------------------------------------
-
 @app.route('/flags', methods=['POST'])
 @requires_api_key
 def flags():
@@ -105,7 +102,6 @@ def flags():
 # -------------------------------------------------------------
 # Get all flags
 # -------------------------------------------------------------
-
 @app.route('/flags', methods=['GET'])
 @requires_auth
 def get_flags():
@@ -124,7 +120,6 @@ def get_flags():
 # -------------------------------------------------------------
 # Filter
 # -------------------------------------------------------------
-
 @app.route('/filter', methods=['GET'])
 @requires_auth
 def filter():
@@ -188,7 +183,6 @@ def client():
 # -------------------------------------------------------------
 # Test endpoint
 # -------------------------------------------------------------
-
 @app.route('/debug', methods=['PUT'])
 def test():
     # Getting the request data
