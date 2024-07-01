@@ -6,6 +6,9 @@
 - **Peaceful Farm Server**: The Peaceful Farm Server gathers flags from clients and submits them to the game server. It also provides a Web Interface enriched with statistics.
 - **Peaceful Farm Client**: The Peaceful Farm Client exploits adversaries' services, gathers flags and sends them to the Peaceful Farm Server.
 
+## Architecture
+![Architecture](server/architecture.png)
+
 ## Requirements
 **Server**:
 - Docker
