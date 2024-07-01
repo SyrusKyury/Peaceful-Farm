@@ -6,6 +6,18 @@
 - **Peaceful Farm Server**: The Peaceful Farm Server gathers flags from clients and submits them to the game server. It also provides a Web Interface enriched with statistics.
 - **Peaceful Farm Client**: The Peaceful Farm Client exploits adversaries' services, gathers flags and sends them to the Peaceful Farm Server.
 
+## Features
+- Web interface with statistics and charts on attacks
+- Timed flag submission system synchronized with competition rounds
+- Automatic generation of multithreaded Python clients
+- Report generation in CSV format
+- API route protection through authentication
+- Web interface protection through authentication
+- Configuration via a single `/server/.env` file
+- Management of request concurrency
+- Feedback on failed attacks
+- Real-time logging in the web interface console
+
 ## Architecture
 ![Architecture](server/architecture.png)
 
