@@ -17,6 +17,7 @@
 - Management of request concurrency
 - Feedback on failed attacks
 - Real-time logging in the web interface console
+- Emulation of the Submission Server for testing purposes
 
 ## Architecture
 ![Architecture](server/architecture.png)
