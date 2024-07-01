@@ -33,3 +33,11 @@ To setup the **Peaceful Farm Server** with your custom options you need to edit 
 - **PEACEFUL_FARM_SERVER_PORT**: Port number used by the **Peaceful Farm Server**.
 - **TIME_ZONE**: Time zone setting used by the application.
 
+
+---
+
+### Testing
+If you want to test the entire system you can modify the `/server/web/app/src/config.py` file. In the file's first lines you can find:
+
+- **FLASK_DEBUG**: Set this variable to true to enable [flask debug](https://flask.palletsprojects.com/en/2.3.x/debugging/)
+- **FLAGS_SUBMISSION_DEBUG**: Set this variable to true if there are no submission server available, in that case **Peaceful Farm Server** will submit the flag to itself emulating the submission server.
