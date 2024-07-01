@@ -112,7 +112,7 @@ def get_flags():
     # Return the flags as a csv file
     csv = "flag,service,exploit,nickname,ip,date,status,message\n"
     for flag in flags:
-        csv += f"'{flag[0]}','{flag[1]}','{flag[2]}','{flag[3]}','{flag[4]}','{flag[5]}','{flag[6]}','{flag[7]}'\n"
+        csv += f"{flag[0]},{flag[1]},{flag[2]},{flag[3]},{flag[4]},{flag[5]},{flag[6]},{flag[7]}\n"
     
     report_name = f"PF_report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
     return Response(csv, mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename={report_name}"})
@@ -198,7 +198,11 @@ def test():
     response = []
     for flag in flags:
         response.append(dict())
-        response[-1]['msg'] = f'[{flag}] {random.choice(response_list)}'
+        # Choising a random response but the first one has 80% chance
+        response[-1]['msg'] = random.choice(response_list[1:]) if random.random() > 0.2 else response_list[0]
+        if "X" in response[-1]['msg']:
+            random_float = random.uniform(5, 15)
+            response[-1]['msg'] = response[-1]['msg'].replace("X",str(round(random_float, 6))) 
         response[-1]['flag'] = flag
         response[-1]['status'] = True if response[-1]['msg'].startswith('Accepted') else False
 
@@ -353,7 +357,10 @@ def background_task():
             f"\t\t[{timestamp()}] Waiting {to_wait:.2f} seconds before submitting"
         )
         time.sleep(to_wait)
-        submit_flags()
+        try:
+            submit_flags()
+        except Exception as e:
+            logging.error(f"\t\tError submitting flags: {e}")
 
         time.sleep(FLAGS_SUBMISSION_WINDOW + 5)
         current_round += 1
