@@ -57,8 +57,8 @@ def flags():
     """
     # Getting the request data
     data = request.json
-    logging.info(f"Received {len(data['flags'])} flags from {data['nickname']} for {data['service']} using {data['exploit']}")
-    
+    logging.info(f"Received {sum(len(flags) for flags in data['flags'].values())} flags from {data['nickname']} for {data['service']} using {data['exploit']}")
+
     if 'flags' not in data.keys() or not data['flags']:
         return "No flags provided", 400
     
@@ -71,33 +71,25 @@ def flags():
     if 'nickname' not in data.keys() or not data['nickname']:
         return "No nickname provided", 400
     
-    # Data sanitization
-    service = data['service'].upper().replace("'", "''")
-    exploit = data['exploit'].upper().replace("'", "''")
-    nickname = data['nickname'].upper().replace("'", "''")
-    message = None
-    status = PENDING
+    # Data
+    service = data['service'].upper()
+    exploit = data['exploit'].upper()
+    nickname = data['nickname'].upper()
 
     cursor = mysql.connection.cursor()
-    new_flags = 0
     flag_dictionary = data['flags']
+
     for ip, flag_list in flag_dictionary.items():
         for flag in flag_list:
             try:
-                cursor.execute('''INSERT INTO flags (flag, service, exploit, nickname, ip, date, status, message) 
-                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
-                               (flag, service, exploit, nickname, ip, datetime.now(), status, message))
-                new_flags += 1
-            except:
+                cursor.execute('''INSERT INTO pending_flags (flag, ip, service, exploit, nickname, date) VALUES (%s, %s, %s, %s, %s, %s)''', (flag, ip, service, exploit, nickname, datetime.now()))
+            except Exception as e:
                 pass
-
+    
     mysql.connection.commit()
     cursor.close()
 
-    if new_flags == 0:
-        return "I've tried to insert the provided flags, but they already exist", 400
-    else:
-        return "Flags inserted: " + str(new_flags), 201
+    return f"Received {sum(len(flags) for flags in data['flags'].values())} flags from {data['nickname']} for {data['service']} using {data['exploit']}", 200
 
 # -------------------------------------------------------------
 # Get all flags
@@ -108,12 +100,18 @@ def get_flags():
     cursor = mysql.connection.cursor()
     cursor.execute('''SELECT * FROM flags''')
     flags = cursor.fetchall()
-    cursor.close()
+
     # Return the flags as a csv file
     csv = "flag,service,exploit,nickname,ip,date,status,message\n"
     for flag in flags:
         csv += f"{flag[0]},{flag[1]},{flag[2]},{flag[3]},{flag[4]},{flag[5]},{flag[6]},{flag[7]}\n"
     
+    cursor.execute('''SELECT * FROM pending_flags''')
+    pending_flags = cursor.fetchall()
+    for flag in pending_flags:
+        csv += f"{flag[0]},{flag[1]},{flag[2]},{flag[3]},{flag[4]},{flag[5]},{PENDING},None\n"
+
+    cursor.close()
     report_name = f"PF_report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
     return Response(csv, mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename={report_name}"})
 
@@ -143,20 +141,23 @@ def filter():
     t1 = datetime.now().replace(hour=int(t1.split(":")[0]), minute=int(t1.split(":")[1]))
     t2 = datetime.now().replace(hour=int(t2.split(":")[0]), minute=int(t2.split(":")[1]))
     
-    query = f"""
-    SELECT 
-        {group} AS selected_group,
-        SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS Accepted,
-        SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS Rejected,
-        SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS Pending
-        FROM flags
-        WHERE date BETWEEN '{t1}' AND '{t2}'
-        GROUP BY selected_group;
-    """
+    query = f"""SELECT 
+    {group} AS selected_group,
+    SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS Accepted,
+    SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS Rejected,
+    SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS Pending
+    FROM (
+        SELECT flag, service, exploit, nickname, ip, date, status, message FROM flags
+        UNION
+        SELECT flag, service, exploit, nickname, ip, date, 0 AS status, NULL AS message FROM pending_flags
+    ) AS combined_flags
+    WHERE date BETWEEN '{t1}' AND '{t2}'
+    GROUP BY {group};"""
 
     cursor = mysql.connection.cursor()
     cursor.execute(query)
     result = cursor.fetchall()
+
     cursor.close()
     return jsonify(result), 200
 
@@ -181,7 +182,7 @@ def client():
     return Response(client, mimetype="text/plain", headers={"Content-Disposition": "attachment;filename=client.py"})
 
 # -------------------------------------------------------------
-# Test endpoint
+# Test endpoints
 # -------------------------------------------------------------
 @app.route('/debug', methods=['PUT'])
 def test():
@@ -193,19 +194,18 @@ def test():
     "Denied: flag is your own",
     "Denied: flag too old",
     "Denied: flag already claimed"]
-
+    logging.info("Received flags on debug endpoint")
     flags = list(request.json)
     response = []
     for flag in flags:
         response.append(dict())
         # Choising a random response but the first one has 80% chance
-        response[-1]['msg'] = random.choice(response_list[1:]) if random.random() > 0.2 else response_list[0]
+        response[-1]['msg'] = random.choice(response_list[1:]) if random.random() < 0.1 else response_list[0]
         if "X" in response[-1]['msg']:
             random_float = random.uniform(5, 15)
             response[-1]['msg'] = response[-1]['msg'].replace("X",str(round(random_float, 6))) 
         response[-1]['flag'] = flag
         response[-1]['status'] = True if response[-1]['msg'].startswith('Accepted') else False
-
     return response, 200
 
 # -------------------------------------------------------------
@@ -245,7 +245,6 @@ def stats():
 
     accepted = []
     rejected = []
-    pending = []
     denied_info = {}
 
     while fetch_result_list:
@@ -254,7 +253,6 @@ def stats():
         end_time = start_time + timedelta(seconds=GAME_TICK_DURATION)
         accepted_count = 0
         rejected_count = 0
-        pending_count = 0
         try:
             while fetch_result and fetch_result[1] < end_time:
                 if fetch_result[2] == ACCEPTED:
@@ -273,7 +271,6 @@ def stats():
 
         accepted.append(accepted_count)
         rejected.append(rejected_count)
-        pending.append(pending_count)
     
 
     # Plotting a function of the number of flags for each interval
@@ -342,7 +339,7 @@ def background_task():
         minutes, seconds = divmod(next_round_seconds_offset, 60)
         hours, minutes = divmod(minutes, 60)
         next_round_diff: float = timedelta(
-            hours=hours, minutes=minutes, seconds=seconds
+            hours=hours, minutes = minutes, seconds=seconds
         )
         seconds_until_next_round = (
             game_start + next_round_diff - datetime.now()
@@ -373,9 +370,9 @@ def submit_flags():
     with app.app_context():
         cur = mysql.connection.cursor()
         # Get all pending flags
-        cur.execute('''SELECT * FROM flags WHERE status = %s''', (str(PENDING)))
-        flags = cur.fetchall()
-        flags = [i[0] for i in flags]
+        cur.execute('''SELECT * FROM pending_flags''')
+        query_result = cur.fetchall()
+        flags = [i[0] for i in query_result]
 
         if len(flags) == 0:
             logging.info("\t\tNo flags to submit")
@@ -398,16 +395,28 @@ def submit_flags():
             logging.info("\t\tGame has ended")
             return
         
+        start = datetime.now()
+        new_flags = []
         for res in result:
             if 'Accepted' in res['msg']:
                 status = ACCEPTED
                 accepted_flags += 1
             else:
                 status = REJECTED
-            cur.execute('''UPDATE flags SET status = %s, message = %s WHERE flag = %s AND status = %s''', (status, res['msg'], res['flag'], str(PENDING)))
+            flags_data = [i for i in list(query_result) if i[0] == res['flag']][0]
+            new_flags.append([*flags_data, status, res['msg']])
 
+        # Using executemany to insert all the new flags at once, if a flag is already in the database (ip, flag PK) it will skip it and continue to the next one
+        # This is done to avoid duplicate flags in the database
+        cur.executemany('''INSERT IGNORE INTO flags (flag, service, exploit, nickname, ip, date, status, message) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''', new_flags)
+        mysql.connection.commit()
+
+        # Delete all the pending flags
+        cur.execute('''DELETE FROM pending_flags''')
         mysql.connection.commit()
         cur.close()
+        end_update = datetime.now()
+        logging.info(f"\t\tUpdating flags took {end_update - start}")
 
         logging.info("\t\t" + "-"*50)
         logging.info(f"\t\tSubmitted flags: {len(flags)}")
