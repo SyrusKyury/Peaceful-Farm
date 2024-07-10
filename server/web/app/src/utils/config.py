@@ -1,3 +1,17 @@
+# --------------------------------------------------------------------------------------------------------------------------
+# Desc: This file contains the configuration of the server. Most of the configuration is done using environment variables
+# that are set in the .env file except for the Live testing variables. The configuration includes:
+# - MySQL connection configuration
+# - Submission server configuration
+# - Client configuration
+# - Peaceful Farm server configuration
+#
+# Version: 1.0
+# Author: Raffaele D'Ambrosio
+# Full Path: server/web/app/src/utils/config.py
+# Creation Date: 09/07/2024
+# --------------------------------------------------------------------------------------------------------------------------
+
 from datetime import datetime
 import os
 
@@ -6,7 +20,8 @@ import os
 # ------------------------------------------------------------------------------
 
 FLASK_DEBUG = False
-FLAGS_SUBMISSION_DEBUG = False
+FLAGS_SUBMISSION_DEBUG = True
+VERBOSE_EXCEPTIONS = False
 
 # ------------------------------------------------------------------------------
 # Banner
@@ -38,7 +53,7 @@ banner = """
 # Client template
 # ------------------------------------------------------------------------------
 
-CLIENT_TEMPLATE = open('/app/src/client_template.py').read()
+CLIENT_TEMPLATE = open('/app/src/utils/client_template.py').read()
 
 # ------------------------------------------------------------------------------
 # MySQL connection configuration
@@ -58,6 +73,7 @@ SUBMISSION_SERVER_TEAM_TOKEN = os.getenv('SUBMISSION_SERVER_TEAM_TOKEN', '31621d
 GAME_TICK_DURATION = int(os.getenv('GAME_TICK_DURATION', 120))
 FLAGS_SUBMISSION_WINDOW = int(os.getenv('FLAGS_SUBMISSION_WINDOW', 20))
 COMPETITION_START_TIME = [int(i) for i in os.getenv('COMPETITION_START_TIME', '11:00:00').split(':')]
+SUBMISSION_PROTOCOL = os.getenv('SUBMISSION_PROTOCOL', 'ccit')
 
 # ------------------------------------------------------------------------------
 # Client configuration
@@ -118,3 +134,7 @@ Server started with the following settings:
 PENDING = 0
 ACCEPTED = 1
 REJECTED = 2
+
+# ------------------------------------------------------------------------------
+# Protocol blueprint
+# ------------------------------------------------------------------------------

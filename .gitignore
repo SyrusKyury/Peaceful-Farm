@@ -1,3 +1,2 @@
 server/database/data
-server/web/app/__pycache__
-server/web/app/src/__pycache__
+*__pycache__

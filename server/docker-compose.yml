@@ -4,6 +4,8 @@ services:
     container_name: Peaceful-Farm-DB
     image: mysql:5.7
     restart: always
+    ports: 
+      - 3306:3306
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -44,3 +46,4 @@ services:
       NOP_TEAM_ID: ${NOP_TEAM_ID}
       SUBMIT_TIME: ${SUBMIT_TIME}
       PEACEFUL_FARM_SERVER_PORT: ${PEACEFUL_FARM_SERVER_PORT}
+      SUBMISSION_PROTOCOL: ${SUBMISSION_PROTOCOL}

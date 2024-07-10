@@ -1,29 +1,13 @@
-from flask import Flask, request, render_template, jsonify, Response
-from src.auth import requires_auth, requires_api_key
-from src.config import *
-import matplotlib.pyplot as plt
-from flask_mysqldb import MySQL
-import random
-import time
+from flask import render_template, request, Response, jsonify
+from src.utils.auth import requires_auth, requires_api_key
+from src.utils.config import *
+from src.utils import utils
+from src.classes.flag import Flag
+from src.database.query import insert_pending_flags, get_all_flags, filter_query, stats_query
 from datetime import datetime, timedelta
+from src.base import app
 import threading
-import requests
-import json
 import logging
-import io
-import base64
-import src.utils as utils
-
-# -------------------------------------------------------------
-# Flask app
-# -------------------------------------------------------------
-
-app = Flask(__name__)
-app.config['MYSQL_HOST'] = 'db'
-app.config['MYSQL_USER'] = MYSQL_USER
-app.config['MYSQL_PASSWORD'] = MYSQL_PASSWORD
-app.config['MYSQL_DB'] = MYSQL_DATABASE
-mysql = MySQL(app)
 
 # -------------------------------------------------------------
 # Routes
@@ -75,19 +59,11 @@ def flags():
     service = data['service'].upper()
     exploit = data['exploit'].upper()
     nickname = data['nickname'].upper()
+    date = datetime.now()
 
-    cursor = mysql.connection.cursor()
-    flag_dictionary = data['flags']
-
-    for ip, flag_list in flag_dictionary.items():
-        for flag in flag_list:
-            try:
-                cursor.execute('''INSERT INTO pending_flags (flag, ip, service, exploit, nickname, date) VALUES (%s, %s, %s, %s, %s, %s)''', (flag, ip, service, exploit, nickname, datetime.now()))
-            except Exception as e:
-                pass
-    
-    mysql.connection.commit()
-    cursor.close()
+    for ip, request_flag_list in data['flags'].items():
+        ip_flag_list = [Flag(flag=flag_i, service=service, exploit=exploit, nickname=nickname, ip=ip, date=date) for flag_i in request_flag_list]
+        insert_pending_flags(ip_flag_list)
 
     return f"Received {sum(len(flags) for flags in data['flags'].values())} flags from {data['nickname']} for {data['service']} using {data['exploit']}", 200
 
@@ -97,69 +73,15 @@ def flags():
 @app.route('/flags', methods=['GET'])
 @requires_auth
 def get_flags():
-    cursor = mysql.connection.cursor()
-    cursor.execute('''SELECT * FROM flags''')
-    flags = cursor.fetchall()
+    flags = get_all_flags()
 
     # Return the flags as a csv file
     csv = "flag,service,exploit,nickname,ip,date,status,message\n"
     for flag in flags:
-        csv += f"{flag[0]},{flag[1]},{flag[2]},{flag[3]},{flag[4]},{flag[5]},{flag[6]},{flag[7]}\n"
-    
-    cursor.execute('''SELECT * FROM pending_flags''')
-    pending_flags = cursor.fetchall()
-    for flag in pending_flags:
-        csv += f"{flag[0]},{flag[1]},{flag[2]},{flag[3]},{flag[4]},{flag[5]},{PENDING},None\n"
+        csv += f"{flag.flag},{flag.service},{flag.exploit},{flag.nickname},{flag.ip},{flag.date},{flag.status},{flag.message}\n"
 
-    cursor.close()
     report_name = f"PF_report_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
     return Response(csv, mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename={report_name}"})
-
-# -------------------------------------------------------------
-# Filter
-# -------------------------------------------------------------
-@app.route('/filter', methods=['GET'])
-@requires_auth
-def filter():
-    
-    # Getting the request data
-    data = request.args
-    if 'group' not in data.keys() or not data['group']:
-        return "No group provided", 400
-    
-    if 't1' not in data.keys():
-        return "No t1 provided", 400
-    
-    if 't2' not in data.keys():
-        return "No t2 provided", 400
-    
-
-    t1 = data['t1'] if data['t1'] else "00:00"                  # HH:MM
-    t2 = data['t2'] if data['t2'] else "23:59"                  # HH:MM
-    group = data['group'].lower()                               # group by column
-
-    t1 = datetime.now().replace(hour=int(t1.split(":")[0]), minute=int(t1.split(":")[1]))
-    t2 = datetime.now().replace(hour=int(t2.split(":")[0]), minute=int(t2.split(":")[1]))
-    
-    query = f"""SELECT 
-    {group} AS selected_group,
-    SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS Accepted,
-    SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS Rejected,
-    SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS Pending
-    FROM (
-        SELECT flag, service, exploit, nickname, ip, date, status, message FROM flags
-        UNION
-        SELECT flag, service, exploit, nickname, ip, date, 0 AS status, NULL AS message FROM pending_flags
-    ) AS combined_flags
-    WHERE date BETWEEN '{t1}' AND '{t2}'
-    GROUP BY {group};"""
-
-    cursor = mysql.connection.cursor()
-    cursor.execute(query)
-    result = cursor.fetchall()
-
-    cursor.close()
-    return jsonify(result), 200
 
 # -------------------------------------------------------------
 # Download client.py
@@ -181,32 +103,33 @@ def client():
     # Return the client.py file and start the download
     return Response(client, mimetype="text/plain", headers={"Content-Disposition": "attachment;filename=client.py"})
 
+
 # -------------------------------------------------------------
-# Test endpoints
+# Filter
 # -------------------------------------------------------------
-@app.route('/debug', methods=['PUT'])
-def test():
+@app.route('/filter', methods=['GET'])
+@requires_auth
+def filter():
+    
     # Getting the request data
-    response_list = [
-    "Accepted: X flag points",
-    "Denied: invalid flag",
-    "Denied: flag from nop team",
-    "Denied: flag is your own",
-    "Denied: flag too old",
-    "Denied: flag already claimed"]
-    logging.info("Received flags on debug endpoint")
-    flags = list(request.json)
-    response = []
-    for flag in flags:
-        response.append(dict())
-        # Choising a random response but the first one has 80% chance
-        response[-1]['msg'] = random.choice(response_list[1:]) if random.random() < 0.1 else response_list[0]
-        if "X" in response[-1]['msg']:
-            random_float = random.uniform(5, 15)
-            response[-1]['msg'] = response[-1]['msg'].replace("X",str(round(random_float, 6))) 
-        response[-1]['flag'] = flag
-        response[-1]['status'] = True if response[-1]['msg'].startswith('Accepted') else False
-    return response, 200
+    data = request.args
+    if 'group' not in data.keys() or not data['group']:
+        return "No group provided", 400
+    
+    if 't1' not in data.keys():
+        return "No t1 provided", 400
+    
+    if 't2' not in data.keys():
+        return "No t2 provided", 400
+    
+    t1 = data['t1'] if data['t1'] else "00:00"                  # HH:MM
+    t2 = data['t2'] if data['t2'] else "23:59"                  # HH:MM
+    group = data['group'].lower()                               # group by column
+
+    t1 = datetime.now().replace(hour=int(t1.split(":")[0]), minute=int(t1.split(":")[1]))
+    t2 = datetime.now().replace(hour=int(t2.split(":")[0]), minute=int(t2.split(":")[1]))
+
+    return jsonify(filter_query(group, t1, t2)), 200
 
 # -------------------------------------------------------------
 # Statistics endpoint
@@ -236,198 +159,45 @@ def stats():
     # Group by the selected type (Exploit, Service, Nickname) and filter by
     # exploit, service or nickname value
 
-    query_template = f"""
-    SELECT {type},date,status,message,flag FROM flags where date BETWEEN '{t1}' AND '{t2}' AND {type} = '{value}' ORDER BY date;"""
-    cursor = mysql.connection.cursor()
-    cursor.execute(query_template)
-    fetch_result_list = list(cursor.fetchall())
-    cursor.close()
+    flags = stats_query(t1, t2, type, value)
+    if not flags:
+        return render_template('stats.html', image=b"", denied_info={}, render_title="No flags found")
 
+    t1_int = utils.datetime_to_int(t1)
+    t2_int = utils.datetime_to_int(t2)
+
+    time_slots = range(t1_int, t2_int, GAME_TICK_DURATION)
+    start_slot = time_slots[0]
     accepted = []
     rejected = []
     denied_info = {}
 
-    while fetch_result_list:
-        fetch_result = fetch_result_list.pop(0)
-        start_time = fetch_result[1]
-        end_time = start_time + timedelta(seconds=GAME_TICK_DURATION)
+    for i in time_slots[1:]:
         accepted_count = 0
         rejected_count = 0
-        try:
-            while fetch_result and fetch_result[1] < end_time:
-                if fetch_result[2] == ACCEPTED:
-                    accepted_count += 1
-                elif fetch_result[2] == REJECTED:
-                    denied_info[fetch_result[4]] = fetch_result[3]
-                    rejected_count += 1
-                elif fetch_result[2] == PENDING:
-                    pending_count += 1
-                if fetch_result_list:
-                    fetch_result = fetch_result_list.pop(0)
-                else:
-                    fetch_result = None
-        except Exception as e:
-            return str(e), 500
 
+        while flags and utils.datetime_to_int(flags[0].date) < i and utils.datetime_to_int(flags[0].date) > start_slot:
+            flag = flags.pop(0)
+            if flag.status == ACCEPTED:
+                accepted_count += 1
+            else:
+                rejected_count += 1
+                denied_info[flag.flag] = flag.message
+
+        start_slot = i
         accepted.append(accepted_count)
         rejected.append(rejected_count)
-    
 
-    # Plotting a function of the number of flags for each interval
-    # The x-axis represents the time intervals
-    # The y-axis represents the number of flags
-    # The #0D8D39 bars represent the number of accepted flags
-    # The #55A5C0 bars represent the number of rejected flags
-
-    n = len(accepted)
-    x = range(n)
-
-    # Bar width
-    width = 0.35
-
-    # Plotting
-    plt.figure(figsize=(10, 5))
-    plt.bar(x, accepted, width, color='#0D8D39', label='Accepted')
-    plt.bar([i + width for i in x], rejected, width, color='#55A5C0', label='Rejected')
-
-    # Setting the x-axis labels
-    plt.xlabel('Ticks')
-    plt.ylabel('Number of flags')
-    plt.title(f"Flags statistics for {type} {value} from {t1.strftime('%H:%M')} to {t2.strftime('%H:%M')}")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-
-    # Saving the plot to a buffer
-    img = io.BytesIO()
-    plt.savefig(img, format='png')
-    img.seek(0)
+    img = utils.plot_flag_statistics(accepted, rejected, type, value, t1, t2)
     render_title = f"Flags statistics for {type} {value} from {t1.strftime('%H:%M')} to {t2.strftime('%H:%M')}"
-    return render_template('stats.html', image=base64.b64encode(img.read()).decode('utf-8'), denied_info=denied_info, render_title=render_title)
-
-# -----------------------------------------------------------------------------------
-# Background task
-# -----------------------------------------------------------------------------------
-def timestamp():
-    return datetime.now().time().replace(microsecond=0)
-
-# -----------------------------------------------------------------------------------
-# Background task
-# -----------------------------------------------------------------------------------
-
-def background_task():
-    game_start = datetime.now().replace(hour=COMPETITION_START_TIME[0], minute=COMPETITION_START_TIME[1], second=COMPETITION_START_TIME[2], microsecond=0)
-    seconds_since_gamestart: float = (datetime.now() - game_start).total_seconds()
-    current_round: int = 1 + seconds_since_gamestart // GAME_TICK_DURATION
-
-    logging.info("\t\t" + "-"*50)
-    logging.info("\t\tGame information")
-    logging.info("\t\t" + "-"*50)
-    logging.info(f"\t\tGame started at {game_start}")
-    logging.info(f"\t\tCurrent round: {current_round}")
-    logging.info("\t\t" + "-"*50 + "\n\n\n\n")
-    submit_flags()
-
-    if current_round < 0:
-        logging.info("\t\tGame has not started yet")
-        logging.info(f"\t\tGame will start in {game_start - datetime.now()}")
-        time.sleep((game_start - datetime.now()).total_seconds())
-        logging.info("\t\tGame started")
-
-    while True:
-        next_round_seconds_offset = GAME_TICK_DURATION * current_round
-        minutes, seconds = divmod(next_round_seconds_offset, 60)
-        hours, minutes = divmod(minutes, 60)
-        next_round_diff: float = timedelta(
-            hours=hours, minutes = minutes, seconds=seconds
-        )
-        seconds_until_next_round = (
-            game_start + next_round_diff - datetime.now()
-        ).total_seconds()
-
-        to_wait = seconds_until_next_round - FLAGS_SUBMISSION_WINDOW
-
-        if to_wait < 0:
-            to_wait = 0
-
-        logging.info(
-            f"\t\t[{timestamp()}] Waiting {to_wait:.2f} seconds before submitting"
-        )
-        time.sleep(to_wait)
-        try:
-            submit_flags()
-        except Exception as e:
-            logging.error(f"\t\tError submitting flags: {e}")
-
-        time.sleep(FLAGS_SUBMISSION_WINDOW + 5)
-        current_round += 1
-
-# -----------------------------------------------------------------------------------
-# Submit flags function
-# -----------------------------------------------------------------------------------
-
-def submit_flags():
-    with app.app_context():
-        cur = mysql.connection.cursor()
-        # Get all pending flags
-        cur.execute('''SELECT * FROM pending_flags''')
-        query_result = cur.fetchall()
-        flags = [i[0] for i in query_result]
-
-        if len(flags) == 0:
-            logging.info("\t\tNo flags to submit")
-            return
-        
-        if len(flags) == 1:
-            logging.info(f"\t\tI'm submitting 1 flag...")
-        else:
-            logging.info(f"\t\tI'm submitting {len(flags)} flags...")
-        
-        if FLAGS_SUBMISSION_DEBUG:
-            url = f"http://localhost:{PEACEFUL_FARM_SERVER_PORT}/debug"
-        else:
-            url = "http://{ip}:{port}{api_endpoint}".format(ip=SUBMISSION_SERVER_IP, port=SUBMISSION_SERVER_PORT, api_endpoint=SUBMISSION_SERVER_API_ENDPOINT)
-        
-        accepted_flags = 0
-        result = requests.put(url, headers={'X-Team-Token': SUBMISSION_SERVER_TEAM_TOKEN}, json=flags).text
-        result = json.loads(result)
-        if result == {'code': 'GAME_ENDED', 'message': '[GAME_ENDED] Game ended'}:
-            logging.info("\t\tGame has ended")
-            return
-        
-        start = datetime.now()
-        new_flags = []
-        for res in result:
-            if 'Accepted' in res['msg']:
-                status = ACCEPTED
-                accepted_flags += 1
-            else:
-                status = REJECTED
-            flags_data = [i for i in list(query_result) if i[0] == res['flag']][0]
-            new_flags.append([*flags_data, status, res['msg']])
-
-        # Using executemany to insert all the new flags at once, if a flag is already in the database (ip, flag PK) it will skip it and continue to the next one
-        # This is done to avoid duplicate flags in the database
-        cur.executemany('''INSERT IGNORE INTO flags (flag, service, exploit, nickname, ip, date, status, message) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''', new_flags)
-        mysql.connection.commit()
-
-        # Delete all the pending flags
-        cur.execute('''DELETE FROM pending_flags''')
-        mysql.connection.commit()
-        cur.close()
-        end_update = datetime.now()
-        logging.info(f"\t\tUpdating flags took {end_update - start}")
-
-        logging.info("\t\t" + "-"*50)
-        logging.info(f"\t\tSubmitted flags: {len(flags)}")
-        logging.info(f"\t\tAccepted flags: {accepted_flags}")
-        logging.info(f"\t\tRejected flags: {len(flags) - accepted_flags}")
-        logging.info("\t\t" + "-"*50)
-
+    return render_template('stats.html', image=img, denied_info=denied_info, render_title=render_title)
 
 # -------------------------------------------------------------
 # Main
 # -------------------------------------------------------------
+
+from src.database.database import initalize_db
+from src.submission_service.core import timed_submission
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -436,32 +206,13 @@ if __name__ == '__main__':
     print("Starting time: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     print(settings_feedback)
 
-    print("Starting the web server...")
-    print("Connecting to the database...")
-    with app.app_context():
-        while True:
-            try:
-                mysql.connection.ping()
-                print("Connection established")
-                break
-            except Exception as e:
-                time.sleep(1)
-
     # Initialize the database with the schema
-    with app.app_context():
-        cur = mysql.connection.cursor()
-        with open('src/schema.sql', 'r') as f:
-            schema_sql = f.read()
-        try:
-            cur.execute(schema_sql)
-        except:
-            pass
-        finally:
-            mysql.connection.commit()
-            cur.close()
+    print("Initializing the database...")
+    initalize_db()
 
-    # Start the background task in a separate thread but with higher priority
-    thread = threading.Thread(target=background_task)
+    # Start the background task in a separate thread
+    print("Starting the background task...")
+    thread = threading.Thread(target=timed_submission)
     thread.daemon = True
     thread.start()
     
