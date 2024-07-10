@@ -188,6 +188,14 @@ def stats():
         accepted.append(accepted_count)
         rejected.append(rejected_count)
 
+    while accepted[0] == 0 and rejected[0] == 0:
+        accepted.pop(0)
+        rejected.pop(0)
+    
+    while accepted[-1] == 0 and rejected[-1] == 0:
+        accepted.pop(-1)
+        rejected.pop(-1)
+
     img = utils.plot_flag_statistics(accepted, rejected, type, value, t1, t2)
     render_title = f"Flags statistics for {type} {value} from {t1.strftime('%H:%M')} to {t2.strftime('%H:%M')}"
     return render_template('stats.html', image=img, denied_info=denied_info, render_title=render_title)
