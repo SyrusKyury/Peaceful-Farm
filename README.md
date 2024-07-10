@@ -1,5 +1,5 @@
 # Peaceful-Farm
-![Peaceful-Farm-Logo](server/web/app/static/logo.png)
+![Peaceful-Farm-Logo](docs/logo.png)
 
 ## Introduction
 **Peaceful Farm** is an Exploit Manager designed for CCIT, its main components are:
@@ -20,7 +20,7 @@
 - Emulation of the Submission Server for testing purposes
 
 ## Architecture
-![Architecture](server/architecture.png)
+![Architecture](docs/architecture.png)
 
 ## Requirements
 **Server**:
