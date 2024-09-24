@@ -13,8 +13,10 @@ import string
 # EDIT THEESE PARAMETERS TO MATCH THE SERVICE YOU'RE EXPLOITING
 # THIS INFORMATION WILL BE USED TO RECORD STATISTICS ON THE SERVER
 #------------------------------------------------------------------------------
-SERVICE = "Example"             # Service you're exploiting
-EXPLOIT = "%s"      # Name of your exploit
+# Service you're exploiting
+SERVICE = "Example"
+# Name of your exploit
+EXPLOIT = "%s"
 
 # -------------------------------------------------------------------------
 # Set this to True to test your exploit on the NOP team.
@@ -22,8 +24,9 @@ EXPLOIT = "%s"      # Name of your exploit
 # the extracted flags.
 # -------------------------------------------------------------------------
 DEBUG = False                   
+VERBOSE_EXCEPTIONS = False
 
-def exploit(target_ip : str) -> list[str]:
+def exploit(target_ip : str, exploit_data : any = None) -> list:
     flags = set()
 
     # -------------------------------------------------------------------------
@@ -34,6 +37,12 @@ def exploit(target_ip : str) -> list[str]:
     # flag = response.text
     # flags.add(flag)
     # -------------------------------------------------------------------------
+    # Parameters:
+    # - target_ip: str, the IP of the target service
+    # - exploit_data: any data you want to reuse to attack the target ip.
+    #         For example, if you need to keep a session, you can store it here.
+    #         If you want to reuse the same account, you can store the credentials here.
+    #
     # Useful functions:
     # 
     # - generate_random_string 
@@ -55,24 +64,23 @@ def exploit(target_ip : str) -> list[str]:
     # -------------------------------------------------------------------------
 
     # Don't touch this, it will return only valid flags
-    return target_ip, set([i for i in flags if re.match(FLAG_REGEX, i)])
+    return target_ip, set([i for i in flags if re.match(r"%s", i)]), exploit_data
 
 #------------------------------------------------------------------------------
 # Peaceful Farm settings
 #------------------------------------------------------------------------------
-SERVER_IP = "%s"       # Peaceful Farm server IP
-SERVER_PORT = "%s"   # Peaceful Farm server port
-API_KEY = "%s"           # Peaceful Farm API key
+# Peaceful Farm server IP
+SERVER_IP = "%s"
+# Peaceful Farm server port
+SERVER_PORT = "%s"
+# Peaceful Farm API key
+API_KEY = "%s"
+# How often the client should submit flags to Peaceful Farm server
+SUBMIT_TIME = int("%s")
+# How oftein the client should attack the targets
+ATTACK_TIME = int("%s")
+# Your nickname (your OS username will be used as default)
 NICKNAME = os.getenv('USER') or os.getenv('USERNAME') or "Peaceful Farmer"
-
-#------------------------------------------------------------------------------
-# Competition settings
-#------------------------------------------------------------------------------
-N_TEAMS = %s                    # Number of teams in the competition
-TEAM_ID = %s                    # Your team ID
-NOP_TEAM_ID = %s                 # Team ID of the NOP team
-FLAG_REGEX = r"%s"   # Regex to validate flags
-SUBMIT_TIME = %s                # How often to submit flags to the server
 
 #------------------------------------------------------------------------------
 # Don't touch anything below this line
@@ -245,6 +253,7 @@ def random_napolify(length : int, blacklist : str = "", stronger_leet = False) -
 
 def submit_flags(flags : dict[str, set]):
     if len(flags) == 0:
+        print("No flags to submit")
         return
     
     for key, value in flags.items():
@@ -257,9 +266,114 @@ def submit_flags(flags : dict[str, set]):
         "service": SERVICE,
         "nickname": NICKNAME
     }
+
+    max_attempts = 5
     
-    response = requests.post(f"http://{SERVER_IP}:{SERVER_PORT}/flags", json=json)
-    print(f"Server: {response.text}")
+    for i in range(max_attempts):
+        try:
+            response = requests.post(f"http://{SERVER_IP}:{SERVER_PORT}/flags", json=json)
+            print(f"Server: {response.text}")
+            return
+        except Exception as e:
+            if VERBOSE_EXCEPTIONS:
+                print(f"Error submitting flags: {e}")
+            else:
+                print(f"Error submitting flags to the Peaceful Farm server")
+            print(f"DO NOT CLOSE THE CLIENT! The flags will be stored in a backup file after {str(max_attempts - i)} more attempts")
+            print(f"Retrying in 5 seconds...")
+            time.sleep(5)
+    
+    print(f"Could not submit flags after {max_attempts} attempts")
+    now = time.time()
+    print(f"The obtained flags will be stored in a file named flags_{EXPLOIT}_{SERVICE}_{now}.txt")
+    with open(f"flags_{EXPLOIT}_{SERVICE}_{now}.txt", "w") as f:
+        for key, value in flags.items():
+            for flag in value:
+                f.write(f"{key},{flag}\n")
+    exit(1)
+
+
+#------------------------------------------------------------------------------
+# Load backup if exists
+#------------------------------------------------------------------------------
+
+def load_backup():
+    print("Checking for backup files...")
+    files = [i for i in os.listdir() if os.path.isfile(i) and i.startswith(f"flags_{EXPLOIT}_{SERVICE}")]
+    if len(files) == 0:
+        print("No backup files found")
+        return
+    
+    print(f"Found {len(files)} backup files")
+    
+    choice = input("Do you want to load the backup files? [y/n] ").lower()
+    if choice != "y":
+        return
+
+    flags = dict()
+    for f in files:
+        print(f"Loading backup file {f}...")
+        line = open(f).read().split("\n")
+        n = 0
+        for l in line:
+            if not l:
+                continue
+            ip, flag = l.split(",")
+            if ip not in flags:
+                flags[ip] = set()
+            flags[ip].add(flag)
+            n += 1
+        print(f"Loaded {n} flags")
+    
+    submit_flags(flags)
+
+#------------------------------------------------------------------------------
+# Get targets
+#------------------------------------------------------------------------------
+
+def get_targets():
+    print("Getting the list of target machines...")
+    try:
+        response = requests.get(f"http://{SERVER_IP}:{SERVER_PORT}/targets")
+        print(f"Found {len(response.json())} target machines")
+        return response.json()
+    except Exception as e:
+        if VERBOSE_EXCEPTIONS:
+            print(f"Error getting targets: \n{e}")
+        else:
+            print(f"Error getting the list of target machines. Check your connection to the Peaceful Farm server.")
+        print("Exiting...")
+        exit(1)
+
+#------------------------------------------------------------------------------
+# Get NOP team ID
+#------------------------------------------------------------------------------
+def get_nop():
+    try:
+        response = requests.get(f"http://{SERVER_IP}:{SERVER_PORT}/nop")
+        return response.json()[0]
+    except Exception as e:
+        if VERBOSE_EXCEPTIONS:
+            print(f"Error getting NOP team: \n{e}")
+        else:
+            print("Error getting NOP team. Check your connection to the Peaceful Farm server.")
+        print("Exiting...")
+        exit(1)
+
+#------------------------------------------------------------------------------
+# Banner
+#------------------------------------------------------------------------------
+banner = """
+ __   ___       __   ___  ___               ___       __        
+|__) |__   /\\  /  ` |__  |__  |  | |       |__   /\\  |__)  |\\/| 
+|    |___ /~~\\ \\__, |___ |    \\__/ |___    |    /~~\\ |  \\  |  | 
+                                                                
+                   __          ___      ___                     
+                  /  ` |    | |__  |\\ |  |                      
+                  \\__, |___ | |___ | \\|  |                      
+                                                                
+"""
+
 
 #------------------------------------------------------------------------------
 # Main function
@@ -268,33 +382,29 @@ def submit_flags(flags : dict[str, set]):
 if __name__ == '__main__':
 
     if DEBUG:
-        print("Exploited flags from NOP team:\n{extracted_flags}".format(extracted_flags=exploit(f"10.60.{NOP_TEAM_ID}.1")))
+        print("Exploited flags from NOP team:\n{extracted_flags}".format(extracted_flags=exploit(get_nop())))
         exit(0)
     
-    target_ip_list = [f"10.60.{i}.1" for i in range(N_TEAMS, 0, -1) if i != NOP_TEAM_ID and i != TEAM_ID]
+    print(banner)
+    load_backup()
+    target_list = get_targets()
 
-    futures = []
     flags = dict()
     now = time.time()
-    with ThreadPoolExecutor() as pool:
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [(pool.submit(exploit, ip, None), ip) for ip in target_list]
         try:
             while True:
-                for _ in target_ip_list[:]:
-                    target_ip = target_ip_list.pop()
-                    target_ip_list.insert(0, target_ip)
-                    #if a thread with target_ip is already running, skip
-                    for future, ip in futures:
-                        if ip == target_ip:
-                            if future.done():
-                                exploited_ip, exploited_flags = future.result()
-                                if flags.get(exploited_ip) is None:
-                                    flags[exploited_ip] = set()
-                                flags[exploited_ip] = flags[exploited_ip].union(exploited_flags)
-                                futures.remove((future, ip))
-                            else:
-                                break
-                    else:
-                        futures.append((pool.submit(exploit, target_ip), target_ip))
+                completed_futures = list(filter(lambda x: x[0].done(), futures))
+                futures = list(filter(lambda x: not x[0].done(), futures))
+                
+                for future, ip in completed_futures:
+                    target_ip, extracted_flags, exploit_data = future.result()
+                    if extracted_flags:
+                        flags[target_ip] = extracted_flags if target_ip not in flags else flags[target_ip].union(extracted_flags)
+                    futures.append((pool.submit(exploit, target_ip, exploit_data), target_ip))
+
+                time.sleep(ATTACK_TIME)
 
                 if time.time() - now > SUBMIT_TIME:
                     submit_flags(flags)

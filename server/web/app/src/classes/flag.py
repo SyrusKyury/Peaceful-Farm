@@ -11,6 +11,23 @@ from datetime import datetime
 
 class Flag:
 
+    """
+        This class is used to store the information about a flag. 
+
+        
+        :param flag: The flag string
+        :param service: The service the flag is related to
+        :param exploit: The exploit used to obtain the flag
+        :param nickname: The nickname of the user that submitted the flag
+        :param ip: The IP address of the server where the flag was found
+        :param date: The date and time when the flag was submitted
+        :param status: The status of the flag (0: Pending, 1: Accepted, 2: Rejected)
+        :param message: The message the submission server returned for the flag
+
+        :param query_result: used to initialize the class with the result of a query
+        :param dictionary: used to initialize the class with a dictionary
+    """
+
     def __init__(self, flag=None, service=None, exploit=None, nickname=None, ip=None, date=None, status=None, message=None, query_result=None, dictionary=None):
         if query_result:
             # Query result initialization

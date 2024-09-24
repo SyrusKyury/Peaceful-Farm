@@ -4,10 +4,13 @@ from src.utils.config import *
 from src.utils import utils
 from src.classes.flag import Flag
 from src.database.query import insert_pending_flags, get_all_flags, filter_query, stats_query
-from datetime import datetime, timedelta
+from datetime import datetime
 from src.base import app
+import importlib
 import threading
 import logging
+
+protocol_module = importlib.import_module("src.submission_service.protocols." + SUBMISSION_PROTOCOL)
 
 # -------------------------------------------------------------
 # Routes
@@ -17,7 +20,7 @@ import logging
 @app.route('/')
 @requires_auth
 def index():
-    return render_template('index.html', api_key=API_KEY, flag_regex=FLAG_REGEX)
+    return render_template('index.html', api_key=API_KEY, flag_regex=protocol_module.FLAG_REGEX)
 
 # -------------------------------------------------------------
 # Api to submit flags to the database
@@ -93,12 +96,9 @@ def client():
     server_ip = request.host.split(":")[0]
     server_port = request.host.split(":")[1]
     api_key = API_KEY
-    n_teams = N_TEAMS
-    team_id = TEAM_ID
-    nop_team_id = NOP_TEAM_ID
-    flag_regex = FLAG_REGEX
     submit_time = SUBMIT_TIME
-    client = CLIENT_TEMPLATE % (exploit_name, server_ip, server_port, api_key, n_teams, team_id, nop_team_id, flag_regex, submit_time)
+    attack_time = ATTACK_TIME
+    client = CLIENT_TEMPLATE % (exploit_name, protocol_module.FLAG_REGEX, server_ip, server_port, api_key, submit_time, attack_time)
 
     # Return the client.py file and start the download
     return Response(client, mimetype="text/plain", headers={"Content-Disposition": "attachment;filename=client.py"})

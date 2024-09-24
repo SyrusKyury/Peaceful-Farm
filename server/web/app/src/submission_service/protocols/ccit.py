@@ -2,18 +2,50 @@
 # Desc: Protocol class definition for Cyber Challenge Italy (CCIT). It is used to submit flags to the submission server
 # It will send a PUT request to the submission server with the flags to submit and will receive the status of the flags.
 # 
-# Version: 1.0
+# Version: 1.1
 # Author: Raffaele D'Ambrosio
 # Full Path: server/web/app/src/submission_service/protocols/ccit.py
 # Creation Date: 09/07/2024
 # --------------------------------------------------------------------------------------------------------------------------
 
-from src.utils.config import SUBMISSION_SERVER_IP, SUBMISSION_SERVER_PORT, SUBMISSION_SERVER_API_ENDPOINT, SUBMISSION_SERVER_TEAM_TOKEN, FLAGS_SUBMISSION_DEBUG, PEACEFUL_FARM_SERVER_PORT, ACCEPTED, REJECTED
+from src.utils.config import FLAGS_SUBMISSION_DEBUG, PEACEFUL_FARM_SERVER_PORT, ACCEPTED, REJECTED
 from src.classes.flag import Flag
 from flask import request, Blueprint
 import random
 import requests
 import json
+
+# -----------------------------------------------------------------------------------
+# Protocol setup
+# -----------------------------------------------------------------------------------
+#
+# IP address of the submission server   
+SUBMISSION_SERVER_IP = "10.10.0.1"
+#
+# Port the submission server listens on                           
+SUBMISSION_SERVER_PORT = "8080"
+#
+# API endpoint to submit flags                       
+SUBMISSION_SERVER_API_ENDPOINT = "/flags"
+#
+# Team token for the submission server
+SUBMISSION_SERVER_TEAM_TOKEN = "0534c4c602fdc620bac2c0f723f63c7e"
+#
+# Regex to validate flags
+FLAG_REGEX = "^[A-Z0-9]{31}=$"
+#
+# Number of teams in the competition
+N_TEAMS = 43
+#
+# Your team ID
+TEAM_ID = 38
+#
+# NOP team ID
+NOP_TEAM_ID = 0
+#
+# -----------------------------------------------------------------------------------
+# Your setup is complete!
+# -----------------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------------
 # Submit flags function
@@ -55,12 +87,29 @@ def submit_flags(flags : list[Flag]) -> tuple[list[Flag], int, int]:
 
 
 # -----------------------------------------------------------------------------------
+# Blueprint to get the list of opponents
+# -----------------------------------------------------------------------------------
+# This endpoint is used to provide the list of opponents to the client
+# -----------------------------------------------------------------------------------
+PROTOCOL_BLUEPRINT = Blueprint('protocol', __name__)
+
+@PROTOCOL_BLUEPRINT.route('/targets', methods=['GET'])
+def targets():
+    response = [f"10.60.{i}.1" for i in range(N_TEAMS, 0, -1) if i != NOP_TEAM_ID and i != TEAM_ID]
+    return response, 200
+
+@PROTOCOL_BLUEPRINT.route('/nop', methods=['GET'])
+def nop():
+    response = [f"10.60.{NOP_TEAM_ID}.1"]
+    return response, 200
+
+
+# -----------------------------------------------------------------------------------
 # Blueprint for the debug endpoint
 # -----------------------------------------------------------------------------------
 # This endpoint is used to debug the submission service, it will receive flags and
 # will respond as the submission server would do
 # -----------------------------------------------------------------------------------
-PROTOCOL_BLUEPRINT = Blueprint('protocol', __name__)
 @PROTOCOL_BLUEPRINT.route('/debug', methods=['PUT'])
 def debug():
     # Getting the request data
