@@ -64,6 +64,7 @@ def flags():
     nickname = data['nickname'].upper()
     date = datetime.now()
 
+    #TODO: Improve in order to call insert_pending_flags only once
     for ip, request_flag_list in data['flags'].items():
         ip_flag_list = [Flag(flag=flag_i, service=service, exploit=exploit, nickname=nickname, ip=ip, date=date) for flag_i in request_flag_list]
         insert_pending_flags(ip_flag_list)
@@ -98,7 +99,7 @@ def client():
     api_key = API_KEY
     submit_time = SUBMIT_TIME
     attack_time = ATTACK_TIME
-    client = CLIENT_TEMPLATE % (exploit_name, protocol_module.FLAG_REGEX, server_ip, server_port, api_key, submit_time, attack_time)
+    client = CLIENT_TEMPLATE % (exploit_name, server_ip, server_port, api_key, submit_time, protocol_module.FLAG_REGEX, attack_time)
 
     # Return the client.py file and start the download
     return Response(client, mimetype="text/plain", headers={"Content-Disposition": "attachment;filename=client.py"})

@@ -1,364 +1,544 @@
-from concurrent.futures import ThreadPoolExecutor
-import requests
-import os
-import time
-import re
-import random
-import string
+import threading, queue, requests, os, time, re, random, string
 
 #------------------------------------------------------------------------------
-# Exploit settings
+# QUICK START
 #------------------------------------------------------------------------------
-# ATTENTION
-# EDIT THEESE PARAMETERS TO MATCH THE SERVICE YOU'RE EXPLOITING
-# THIS INFORMATION WILL BE USED TO RECORD STATISTICS ON THE SERVER
+# Welcome to the Peaceful Farm client! Write your exploit in the exploit
+# function below. Also DON'T FORGET to set the SERVICE constant to the name of
+# the service you are exploiting. This helps the server to identify the service
+# you are attacking and to store the flags correctly. 
 #------------------------------------------------------------------------------
-# Service you're exploiting
-SERVICE = "Example"
-# Name of your exploit
+
+#------------------------------------------------------------------------------
+# SETTINGS
+#------------------------------------------------------------------------------
+
+# Enable verbose debug messages for detailed output during execution.
+# Set to True to enable detailed logs, or False to disable them.
+VERBOSE_DEBUG: bool = False
+
+# Configure exploit settings for team attacks.
+# Choose the target of the attack:
+# 0: Attack the nop team (to test your exploit before spoiling to the other teams)
+# 1: Attack your own team (to test if you fixed the vulnerability you're exploiting)
+# 2: Attack your opponents (to get and submit the flags)
+EXPLOIT_DEBUG: int = 2
+
+# The name of the service being exploited.
+SERVICE: str = "Example"
+
+# The name of the exploit being used.
 EXPLOIT = "%s"
 
-# -------------------------------------------------------------------------
-# Set this to True to test your exploit on the NOP team.
-# This will not submit flags to the server and will only print
-# the extracted flags.
-# -------------------------------------------------------------------------
-DEBUG = False                   
-VERBOSE_EXCEPTIONS = False
 
-def exploit(target_ip : str, exploit_data : any = None) -> list:
-    flags = set()
+def exploit(target_ip : str, exploit_data : any = None) -> set[str]:
+    try:
+        flags = set()
+        # -------------------------------------------------------------------------
+        # Your exploit here
+        # -------------------------------------------------------------------------
+        # Example:
+        # response = requests.get(f"http://{target_ip}/flag")
+        # flag = response.text
+        # flags.add(flag)
+        # -------------------------------------------------------------------------
+        # Parameters:
+        # - target_ip: str, the IP of the target service
+        # - exploit_data: any data you want to reuse to attack the target ip.
+        #         For example, if you need to keep a session, you can store it here.
+        #         If you want to reuse the same account, you can store the credentials 
+        #         here etc.
+        #
+        # -------------------------------------------------------------------------
+        #
+        # Useful functions:
+        # 
+        # - Utils.random_string 
+        #   Generates a random string of a given length
+        #   Arguments:
+        #       length: int, the length of the string to generate
+        #       valid_set: str, the set of characters to choose from
+        #   Returns:
+        #       str: the generated string
+        #
+        # - Utils.flagids         
+        #   Returns the challenge's flag ids. Flag ids provide useful
+        #   information to exploit services. For example, they can be
+        #   usernames, ids, or any other information.
+        #   Arguments:
+        #       None
+        #   Returns:
+        #       dict: the challenge's flag ids
+        #
+        # -------------------------------------------------------------------------
+        # Have fun!
+        # -------------------------------------------------------------------------
 
-    # -------------------------------------------------------------------------
-    # Your exploit here
-    # -------------------------------------------------------------------------
-    # Example:
-    # response = requests.get(f"http://{target_ip}/flag")
-    # flag = response.text
-    # flags.add(flag)
-    # -------------------------------------------------------------------------
-    # Parameters:
-    # - target_ip: str, the IP of the target service
-    # - exploit_data: any data you want to reuse to attack the target ip.
-    #         For example, if you need to keep a session, you can store it here.
-    #         If you want to reuse the same account, you can store the credentials here.
-    #
-    # Useful functions:
-    # 
-    # - generate_random_string 
-    #   Generates a random string of a given length
-    #   Arguments:
-    #       length: int, the length of the string to generate
-    #       include_symbols: bool, whether to include symbols in the string
-    #       valid_set: str, the set of characters to choose from
-    #
-    # - random_napolify         
-    #   Generates a random string with a Napoli theme
-    #   Arguments:
-    #       length: int, the length of the string to generate
-    #       blacklist: str, a string containing characters to avoid in the output
-    #       stronger_leet: bool, whether to apply stronger leet transformations
-    #
-    # -------------------------------------------------------------------------
-    # Have fun!
-    # -------------------------------------------------------------------------
+    except:
+        # You can handle exceptions here. Please don't let your exploit crash,
+        # this would stop the attack for that target. If you want to ignore the
+        # exception, just use the pass statement.
+        pass
 
-    # Don't touch this, it will return only valid flags
-    return target_ip, set([i for i in flags if re.match(r"%s", i)]), exploit_data
+    finally:
+        # Don't touch this, it will return only valid flags
+        return set(filter(lambda f: re.match(FLAG_REGEX, f), flags))
+
 
 #------------------------------------------------------------------------------
-# Peaceful Farm settings
+# CONSTANTS
 #------------------------------------------------------------------------------
+# The following constants are set by the server. You can modify them if needed
+# but it is not recommended.
+
 # Peaceful Farm server IP
 SERVER_IP = "%s"
+
 # Peaceful Farm server port
 SERVER_PORT = "%s"
+
 # Peaceful Farm API key
 API_KEY = "%s"
+
 # How often the client should submit flags to Peaceful Farm server
 SUBMIT_TIME = int("%s")
-# How oftein the client should attack the targets
-ATTACK_TIME = int("%s")
+
+# Flag regex
+FLAG_REGEX = r"%s"
+
 # Your nickname (your OS username will be used as default)
 NICKNAME = os.getenv('USER') or os.getenv('USERNAME') or "Peaceful Farmer"
 
-#------------------------------------------------------------------------------
-# Don't touch anything below this line
-#------------------------------------------------------------------------------
+# Maximum number of retries when submitting flags
+MAX_RETRIES_FOR_SUBMISSION = 3
+
+# Time to wait before submitting flags again after a failure
+RETRY_TIME = 3
+
+# Iteration time for exploit threads. When the thread doesn't find any flags
+# it kills itself
+SUICIDE_COUNTDOWN : int = 10
+
+# How often the attacks are performed
+ATTACK_TIME : int = int("%s")
+
+# How often the threads' health is checked
+HEALT_CHECK_TIME : int = 5
 
 #------------------------------------------------------------------------------
-# Utility functions
+# Colors
 #------------------------------------------------------------------------------
 
-def generate_random_string(length : int, include_symbols=False, valid_set=string.ascii_letters + string.digits):
-    r"""
-    Generate a random string of a given length.
-    length: int, the length of the string to generate.
-    include_symbols: bool, whether to include symbols in the string.
-    valid_set: str, the set of characters to choose from.
-    """
-    ascii_chars = valid_set
-    if include_symbols:
-        ascii_chars += string.punctuation
-
-    random_string = "".join(random.choice(ascii_chars) for _ in range(length))
-    return random_string
-
-
-def random_leet(text: str, prob : float = 0.5, stronger : bool = False) -> str:
-    r"""
-    Randomly apply leet transformations to a string.
-    text: str, the text to transform.
-    prob: float, the probability of transforming a character.
-    stronger: bool, whether to apply stronger leet transformations (uses non-alphanumeric characters instead of numbers).
-    """
-
-    leet_map = {
-        "a" : ["4", "@"],
-        "b" : ["8"],
-        "c" : ["c", "(", "{"],
-        "d" : ["d"],
-        "e" : ["3"],
-        "f" : ["f"],
-        "g" : ["6"],
-        "h" : ["h"],
-        "i" : ["1", "!", "|"],
-        "j" : ["j"],
-        "k" : ["k"],
-        "l" : ["l", "1", "|", "I"],
-        "m" : ["m"],
-        "n" : ["n"],
-        "o" : ["0"],
-        "p" : ["p"],
-        "q" : ["q"],
-        "r" : ["r"],
-        "s" : ["5", "$"],
-        "t" : ["7"],
-        "u" : ["u"],
-        "v" : ["v"],
-        "w" : ["w"],
-        "x" : ["x"],
-        "y" : ["y"],
-        "z" : ["z", "2"]
-    }
-
-    res = ""
-    for char in text:
-        entry = char
-        if random.random() < prob:
-            entry = entry.lower()
-        else:
-            entry = entry.upper()
-
-        if random.random() < prob:
-            entry = leet_map.get(entry.lower(), entry)
-            if isinstance(entry, list):
-                if stronger:
-                    entry = random.choice(entry)
-                else:
-                    entry = entry[0]
-
-        res += entry
-
-    return res
-
-
-def random_napolify(length : int, blacklist : str = "", stronger_leet = False) -> str:
-    r"""
-    Generate a random string with a Napoli theme.
-    length: int, the length of the string to generate.
-    blacklist: str, a string containing characters to avoid in the output.
-    stronger_leet: bool, whether to apply stronger leet transformations.
-    """
-    sentences = [
-        "forza napoli sempre",
-        "il ciuccio vola",
-        "staro con te",
-        "un giorno all improvviso",
-        "victor osimhen",
-        "dries mertens",
-        "lorenzo insigne",
-        "jose maria callejon",
-        "marek hamsik",
-        "edinson cavani",
-        "maradona",
-        "diego",
-        "san paolo",
-        "kvicha kvaratskhelia",
-        "tifa napoli",
-        "ciccio bello tifa napoli",
-        "forza napoli",
-        "napoli",
-        "capitan di lorenzo",
-        "giovanni di lorenzo",
-        "diego armando maradona",
-        "ezequiel lavezzi",
-        "christian maggio",
-        "paolo cannavaro",
-        "rispetta il ciuccio",
-        "napoli rules torino",
-        "napoli capitale",
-        "luciano spalletti",
-        "mario rui",
-        "il maestro mario rui",
-        "Alessio Zerbin",
-        "coca cola",
-        "bevi cocacola napoletana",
-        "il ciuccio",
-        "pulcinella",
-        "goku con la maglia del napoli",
-        "napoli e il napoli",
-        "napoli napoli napoli",
-        "chi non salta juventino e",
-        "Pizza",
-        "Mandolino",
-        "Vesuvio",
-        "San Gennaro",
-        "O sole mio",
-        "Napoli e",
-        "Pino Daniele",
-        "Toto",
-        "Tarantella",
-        "margherita",
-        "ragu",
-        "kalidou",
-        "koulibaly",
-        "azzurri",
-        "partenopei",
-        "scudetto"
-    ]
-
-    sentences = [i for i in sentences if len(i) + 1 <= length]
-
-    if len(sentences) == 0:
-        return generate_random_string(length)
-
-    spacing = random.choice(["-", "_", "~", ".", ","])
-    sentences = [i.replace(" ", spacing) + spacing for i in sentences]
-
-    random_sentence = random_leet(random.choice(sentences), prob=0.5, stronger=stronger_leet)
-    if len(random_sentence) > length:
-        random_sentence = random_sentence[:length]
-    elif len(random_sentence) < length:
-        random_sentence += generate_random_string(length - len(random_sentence))
-
-    for char in blacklist:
-        random_sentence = random_sentence.replace(char, random.choice(string.ascii_letters))
-
-    return random_sentence
+YELLOW = "\033[93m"
+RED = "\033[91m"
+GREEN = "\033[92m"
+BLUE = "\033[94m"
+SKY = "\033[96m"
+RESET = "\033[0m"
 
 #------------------------------------------------------------------------------
-# Submit flags
+# Exploit Thread Class
 #------------------------------------------------------------------------------
 
-def submit_flags(flags : dict[str, set]):
-    if len(flags) == 0:
-        print("No flags to submit")
-        return
-    
-    for key, value in flags.items():
-        flags[key] = list(value)
-    
-    json = {
-        "api_key": API_KEY,
-        "flags": flags,
-        "exploit": EXPLOIT,
-        "service": SERVICE,
-        "nickname": NICKNAME
-    }
+class ExploitThread(threading.Thread):
 
-    max_attempts = 5
-    
-    for i in range(max_attempts):
-        try:
-            response = requests.post(f"http://{SERVER_IP}:{SERVER_PORT}/flags", json=json)
-            print(f"Server: {response.text}")
-            return
-        except Exception as e:
-            if VERBOSE_EXCEPTIONS:
-                print(f"Error submitting flags: {e}")
+    def __init__(self, target_ip : str, queue : queue.Queue, stop_event : threading.Event):
+        super().__init__()
+        self.target_ip = target_ip
+        self.exploit_data = None
+        self.queue = queue
+        self.stop_event = stop_event
+
+    def run(self):
+        suicide_countdown : int = SUICIDE_COUNTDOWN
+
+        while suicide_countdown > 0 and not self.stop_event.is_set():
+            flags = exploit(self.target_ip, self.exploit_data)
+            if len(flags) > 0:
+                self.queue.put((self.target_ip, flags))
+                suicide_countdown = SUICIDE_COUNTDOWN
             else:
-                print(f"Error submitting flags to the Peaceful Farm server")
-            print(f"DO NOT CLOSE THE CLIENT! The flags will be stored in a backup file after {str(max_attempts - i)} more attempts")
-            print(f"Retrying in 5 seconds...")
-            time.sleep(5)
-    
-    print(f"Could not submit flags after {max_attempts} attempts")
-    now = time.time()
-    print(f"The obtained flags will be stored in a file named flags_{EXPLOIT}_{SERVICE}_{now}.txt")
-    with open(f"flags_{EXPLOIT}_{SERVICE}_{now}.txt", "w") as f:
-        for key, value in flags.items():
-            for flag in value:
-                f.write(f"{key},{flag}\n")
-    exit(1)
+                suicide_countdown -= 1
+            time.sleep(ATTACK_TIME)
 
-
-#------------------------------------------------------------------------------
-# Load backup if exists
-#------------------------------------------------------------------------------
-
-def load_backup():
-    print("Checking for backup files...")
-    files = [i for i in os.listdir() if os.path.isfile(i) and i.startswith(f"flags_{EXPLOIT}_{SERVICE}")]
-    if len(files) == 0:
-        print("No backup files found")
-        return
-    
-    print(f"Found {len(files)} backup files")
-    
-    choice = input("Do you want to load the backup files? [y/n] ").lower()
-    if choice != "y":
-        return
-
-    flags = dict()
-    for f in files:
-        print(f"Loading backup file {f}...")
-        line = open(f).read().split("\n")
-        n = 0
-        for l in line:
-            if not l:
-                continue
-            ip, flag = l.split(",")
-            if ip not in flags:
-                flags[ip] = set()
-            flags[ip].add(flag)
-            n += 1
-        print(f"Loaded {n} flags")
-    
-    submit_flags(flags)
-
-#------------------------------------------------------------------------------
-# Get targets
-#------------------------------------------------------------------------------
-
-def get_targets():
-    print("Getting the list of target machines...")
-    try:
-        response = requests.get(f"http://{SERVER_IP}:{SERVER_PORT}/targets")
-        print(f"Found {len(response.json())} target machines")
-        return response.json()
-    except Exception as e:
-        if VERBOSE_EXCEPTIONS:
-            print(f"Error getting targets: \n{e}")
+        
+        if suicide_countdown == 0:
+            print(f"{RED}[FAIL] [Thread {self.target_ip}] Exiting due to the lack of new flags{RESET}")
         else:
-            print(f"Error getting the list of target machines. Check your connection to the Peaceful Farm server.")
-        print("Exiting...")
-        exit(1)
+            print(f"{GREEN}[SUCCESS] [Thread {self.target_ip}] Exiting due to EXIT signal{RESET}")
 
 #------------------------------------------------------------------------------
-# Get NOP team ID
+# Submission Manager Class
 #------------------------------------------------------------------------------
-def get_nop():
-    try:
-        response = requests.get(f"http://{SERVER_IP}:{SERVER_PORT}/nop")
-        return response.json()[0]
-    except Exception as e:
-        if VERBOSE_EXCEPTIONS:
-            print(f"Error getting NOP team: \n{e}")
-        else:
-            print("Error getting NOP team. Check your connection to the Peaceful Farm server.")
-        print("Exiting...")
-        exit(1)
+
+class SubmissionManager(threading.Thread):
+
+
+    def __init__(self, queue : queue.Queue, stop_flag_submission : threading.Event, backup_manager : 'BackupManager'):
+        super().__init__()
+        self.stop_flag_submission = stop_flag_submission
+        self.backup_manager = backup_manager
+        self.exploit_data = None
+        self.flags = dict()
+        self.queue = queue
+
+
+    def run(self):
+        while not self.stop_flag_submission.is_set():
+            time.sleep(SUBMIT_TIME)
+            self.get_data_from_queue()
+            self.try_to_submit_flags()
+
+        if EXPLOIT_DEBUG == 1 or EXPLOIT_DEBUG == 0:
+            return
+        
+        print(f"{GREEN}[SUCCESS] [Submission service] Sending the last flags before exiting due to EXIT signal{RESET}")
+        self.get_data_from_queue()
+        if len(self.flags) > 0:
+            self.try_to_submit_flags()
+
+
+    def try_to_submit_flags(self):
+        if EXPLOIT_DEBUG == 1 or EXPLOIT_DEBUG == 0:
+            print(f"{YELLOW}[WARNING] [Submission service] Debug mode enabled, flags will not be submitted{RESET}")
+            return
+        # Load data from backup if it exists
+        if self.backup_manager.backup_enabled:
+            data = self.backup_manager.load_data()
+            for key, value in data.items():
+                self.flags[key] = self.flags[key].union(value) if key in self.flags.keys() else value
+
+        for i in range(MAX_RETRIES_FOR_SUBMISSION):
+            try:
+                self.submit_flags()
+                return
+            except Exception as e:
+                if VERBOSE_DEBUG:
+                    print(f"{RED}[FAIL] [Submission service], try {str(i+1)}: {e}{RESET}")
+                else:
+                    print(f"{RED}[FAIL] [Submission service] Failed to submit flags, try {str(i+1)}{RESET}")
+                
+                print(f"{RED}[FAIL] [Submission service] Could not submit flags to the Peaceful Farm server{RESET}")
+                print(f"{YELLOW}[WARNING] [Submission service] Retrying in 5 seconds{RESET}")
+                time.sleep(RETRY_TIME)
+        
+        if self.backup_manager.backup_enabled:
+            self.backup_manager.save_data(self.flags)
+            self.flags.clear()
+            print(f"{YELLOW}[WARNING] [Submission service] Flags saved to backup{RESET}")
+        
+
+
+    def get_data_from_queue(self):
+        current_queue_size = self.queue.qsize()
+        for _ in range(current_queue_size):
+            data = self.queue.get()
+            self.flags[data[0]] = self.flags[data[0]].union(data[1]) if data[0] in self.flags.keys() else data[1]
+
+    
+    def submit_flags(self):
+        if len(self.flags) == 0:
+            print(f"{YELLOW}[WARNING] [Submission service] No flags to submit{RESET}")
+            return
+        
+        for key, value in self.flags.items():
+            self.flags[key] = list(value)
+        
+        json = {
+            "api_key": API_KEY,
+            "flags": self.flags,
+            "exploit": EXPLOIT,
+            "service": SERVICE,
+            "nickname": NICKNAME
+        }
+
+        response = requests.post(f"http://{SERVER_IP}:{SERVER_PORT}/flags", json=json)
+        print(f"{SKY}[SERVER] {response.text}{RESET}")
+        self.flags.clear()
+        return
+        
+#------------------------------------------------------------------------------
+# Client Class
+#------------------------------------------------------------------------------     
+
+class Client:
+
+
+    def __init__(self, targets : list[str], backup_manager : 'BackupManager') -> None:
+        self.targets = targets
+        self.backup_manager = backup_manager
+        self.threads = []
+        self.flags_queue = queue.Queue()
+        self.stop_event = threading.Event()
+        self.stop_flag_submission = threading.Event()
+
+
+    def start(self):
+        for t in self.targets:
+            thread = ExploitThread(t, self.flags_queue, self.stop_event)
+            thread.start()
+            self.threads.append(thread)
+
+        self.threads.append(SubmissionManager(self.flags_queue, self.stop_flag_submission, self.backup_manager))
+        self.threads[-1].start()
+
+    
+    def stop(self):
+        self.stop_event.set()
+        for t in self.threads[:-1]:
+            t.join()
+        
+        self.stop_flag_submission.set()
+        self.threads[-1].join()
+
+
+    def healt_check(self):
+        if [t.is_alive() for t in self.threads[:-1]].count(True) == 0:
+            return False, "All exploit threads are dead"
+        
+        if not self.threads[-1].is_alive():
+            return False, "Submission service is dead"
+        
+        return True, "System is healthy"
+
+
+#------------------------------------------------------------------------------
+# Custom Exception
+#------------------------------------------------------------------------------
+
+
+class HealtException(Exception):
+    pass
+
+
+#------------------------------------------------------------------------------
+# Backup Manager Class
+#------------------------------------------------------------------------------
+
+
+class BackupManager:
+
+
+    def __init__(self) -> None:
+        current_directory = os.path.dirname(os.path.realpath(__file__))
+        self.backup_directory = os.path.join(current_directory, "backup_" + EXPLOIT + "_" + SERVICE)
+        self.backup_file_base = "backup_"
+        self.backup_enabled = False
+
+
+    def create_backup_directory(self) -> bool:
+        try:
+            if not os.path.exists(self.backup_directory):
+                os.makedirs(self.backup_directory)
+            self.backup_enabled = True
+            return True
+        except Exception as e:
+            if VERBOSE_DEBUG:
+                print(f"{RED}[FAIL] [Backup Manager] Failed to create backup directory: {e}{RESET}")
+            else:
+                print(f"{RED}[FAIL] [Backup Manager] Failed to create backup directory{RESET}")
+            return False
+        
+    
+    def save_data(self, data : dict) -> bool:
+        if not self.backup_enabled:
+            return False
+        
+        try:
+            files = [f for f in os.listdir(self.backup_directory) if self.backup_file_base in f]
+            backup_file = self.backup_file_base + str(len(files))
+            with open(os.path.join(self.backup_directory, backup_file), "w") as f:
+                for target, list in data.items():
+                    for flag in list:
+                        f.write(f"{target}:::{flag}\n")
+            return True
+        
+        except Exception as e:
+            if VERBOSE_DEBUG:
+                print(f"{RED}[FAIL] [Backup Manager] Failed to save data: {e}{RESET}")
+            else:
+                print(f"{RED}[FAIL] [Backup Manager] Failed to save data{RESET}")
+            return False
+        
+
+    def load_data(self) -> dict[str, list[str]]:
+        if not self.backup_enabled:
+            return dict()
+        
+        try:
+            files = [f for f in os.listdir(self.backup_directory) if self.backup_file_base in f]
+            if len(files) == 0:
+                return dict()
+            
+            data = dict()
+            for f in files:
+                with open(os.path.join(self.backup_directory, f), "r") as file:
+                    for line in file:
+                        if len(line) > 0:
+                            target, flag = line.replace("\n", "").split(":::")
+                            if target in data.keys():
+                                data[target].append(flag)
+                            else:
+                                data[target] = [flag]
+            
+            # Remove backup files
+            for f in files:
+                os.remove(os.path.join(self.backup_directory, f))
+            return data
+        
+        except Exception as e:
+            if VERBOSE_DEBUG:
+                print(f"{RED}[FAIL] [Backup Manager] Failed to load data: {e}{RESET}")
+            else:
+                print(f"{RED}[FAIL] [Backup Manager] Failed to load data{RESET}")
+            return dict()
+        
+
+    def save_file(self, filename : str, data : str) -> bool:
+        if not self.backup_enabled:
+            return False
+        
+        try:
+            with open(os.path.join(self.backup_directory, filename), "w") as f:
+                f.write(data)
+            return True
+        except Exception as e:
+            if VERBOSE_DEBUG:
+                print(f"{RED}[FAIL] [Backup Manager] Failed to save file: {e}{RESET}")
+            else:
+                print(f"{RED}[FAIL] [Backup Manager] Failed to save file{RESET}")
+            return False
+        
+
+    def load_file(self, filename : str) -> str:
+        if not self.backup_enabled:
+            return ""
+        
+        try:
+            with open(os.path.join(self.backup_directory, filename), "r") as f:
+                return f.read()
+        except Exception as e:
+            if VERBOSE_DEBUG:
+                print(f"{RED}[FAIL] [Backup Manager] Failed to load file: {e}{RESET}")
+            else:
+                print(f"{RED}[FAIL] [Backup Manager] Failed to load file{RESET}")
+            return ""
+                
+        
+#-------------------------------------------------------------------------------
+# Target Manager Class
+#-------------------------------------------------------------------------------
+
+class TargetManager:
+
+    def __init__(self, backup_manager : 'BackupManager') -> None:
+        self.backup_manager = backup_manager
+    
+    def get_targets(self):
+        for i in range(MAX_RETRIES_FOR_SUBMISSION):
+            try:
+                response = requests.get(f"http://{SERVER_IP}:{SERVER_PORT}/targets", json={"api_key": API_KEY})
+                if self.backup_manager.backup_enabled:
+                    self.backup_manager.save_file("targets", "\n".join(response.json()))
+                return response.json()
+            except Exception as e:
+                if VERBOSE_DEBUG:
+                    print(f"{RED}[FAIL] [Targets] try {str(i+1)}: {e}{RESET}")
+                else:
+                    print(f"{RED}[FAIL] [Targets] Failed to get targets, try {str(i+1)}{RESET}")
+                time.sleep(RETRY_TIME)
+        
+        if self.backup_manager.backup_enabled:
+            print(f"{YELLOW}[WARNING] [Targets] Loading targets from backup{RESET}")
+            data = self.backup_manager.load_file("targets")
+            if data != "":
+                return list(filter(lambda t : len(t) > 0, data.split("\n")))
+        return []
+
+
+    def get_nop(self):
+        for i in range(MAX_RETRIES_FOR_SUBMISSION):
+            try:
+                response = requests.get(f"http://{SERVER_IP}:{SERVER_PORT}/nop", json={"api_key": API_KEY})
+                if self.backup_manager.backup_enabled:
+                    self.backup_manager.save_file("nop", "\n".join(response.json()))
+                return response.json()
+            except Exception as e:
+                if VERBOSE_DEBUG:
+                    print(f"{RED}[FAIL] [NOP] try {str(i+1)}: {e}{RESET}")
+                else:
+                    print(f"{RED}[FAIL] [NOP] Failed to get NOP, try {str(i+1)}{RESET}")
+                time.sleep(RETRY_TIME)
+        
+        if self.backup_manager.backup_enabled:
+            print(f"{YELLOW}[WARNING] [Targets] Loading nop from backup{RESET}")
+            data = self.backup_manager.load_file("nop")
+            if data != "":
+                return list(filter(lambda t : len(t) > 0, data.split("\n")))
+
+        return []
+    
+
+    def get_own_team(self):
+        for i in range(MAX_RETRIES_FOR_SUBMISSION):
+            try:
+                response = requests.get(f"http://{SERVER_IP}:{SERVER_PORT}/own", json={"api_key": API_KEY})
+                if self.backup_manager.backup_enabled:
+                    self.backup_manager.save_file("own", "\n".join(response.json()))
+                return response.json()
+            except Exception as e:
+                if VERBOSE_DEBUG:
+                    print(f"{RED}[FAIL] [Own] try {str(i+1)}: {e}{RESET}")
+                else:
+                    print(f"{RED}[FAIL] [Own] Failed to get own team, try {str(i+1)}{RESET}")
+                time.sleep(RETRY_TIME)
+        
+        if self.backup_manager.backup_enabled:
+            print(f"{YELLOW}[WARNING] [Targets] Loading own team from backup{RESET}")
+            data = self.backup_manager.load_file("own")
+            if data != "":
+                return list(filter(lambda t : len(t) > 0, data.split("\n")))
+            
+        return []
+
+        
+#------------------------------------------------------------------------------
+# Utils
+#------------------------------------------------------------------------------
+
+class Utils:
+
+    @staticmethod
+    def random_string(length : int, valid_set=string.ascii_letters + string.digits):
+        r"""
+        Generate a random string of a given length.
+        length: int, the length of the string to generate.
+        include_symbols: bool, whether to include symbols in the string.
+        valid_set: str, the set of characters to choose from.
+        """
+        return "".join(random.choice(valid_set) for _ in range(length))
+
+
+    @staticmethod
+    def flagids() -> dict:
+        r"""
+        Return the challenge's flag ids. Flag ids provide useful
+        information to exploit services. For example, they can be
+        usernames, ids, or any other information.
+        """
+        for i in range(MAX_RETRIES_FOR_SUBMISSION):
+            try:
+                response = requests.get(f"http://{SERVER_IP}:{SERVER_PORT}/flagids", json={"api_key": API_KEY})
+                return response.json()
+            except Exception as e:
+                if VERBOSE_DEBUG:
+                    print(f"{RED}[FAIL] [FlagIds] try {str(i+1)}: {e}{RESET}")
+                else:
+                    print(f"{RED}[FAIL] [FlagIds] Failed to get flag ids, try {str(i+1)}{RESET}")
+        
+        return None
+
+
 
 #------------------------------------------------------------------------------
 # Banner
@@ -370,54 +550,74 @@ banner = """
                                                                 
                    __          ___      ___                     
                   /  ` |    | |__  |\\ |  |                      
-                  \\__, |___ | |___ | \\|  |                      
-                                                                
+                  \\__, |___ | |___ | \\|  |                                                                               
 """
 
 
-#------------------------------------------------------------------------------
-# Main function
-#------------------------------------------------------------------------------
+if __name__ == "__main__":
+    # Print banner
+    print(YELLOW + banner + RESET)
+    print(f"{SKY}[Service]{RESET} {SERVICE}")
+    print(f"{SKY}[Exploit]{RESET} {EXPLOIT}")
+    print(f"{SKY}[Peaceful Farm server IP]{RESET} {SERVER_IP}")
+    print(f"{SKY}[Peaceful Farm server port]{RESET} {SERVER_PORT}")
+    print(f"{SKY}[Mode]{RESET} {'NOP' if EXPLOIT_DEBUG == 0 else 'OWN' if EXPLOIT_DEBUG == 1 else 'OPPONENTS'}\n")
 
-if __name__ == '__main__':
+    try:
+        # Backup manager setup
+        backup_manager = BackupManager()
+        if backup_manager.create_backup_directory():
+            print(f"{GREEN}[SUCCESS] [MAIN] Backup manager set up successfully ✔{RESET}")
+        else:
+            print(f"{RED}[FAIL] [MAIN] Backup manager failed to set up ✘{RESET}")
+            print(f"{YELLOW}[WARNING] [MAIN] Backup will not be created{RESET}")
 
-    if DEBUG:
-        print("Exploited flags from NOP team:\n{extracted_flags}".format(extracted_flags=exploit(get_nop())))
+        # Getting targets
+        target_manager = TargetManager(backup_manager)
+
+        if EXPLOIT_DEBUG == 0:
+            targets = target_manager.get_nop()
+        elif EXPLOIT_DEBUG == 1:
+            targets = target_manager.get_own_team()
+        else:
+            targets = target_manager.get_targets()
+
+
+        if len(targets) == 0:
+            print(f"{RED}[FAIL] [MAIN] No targets found ✘{RESET}")
+            print(f"{YELLOW}[WARNING] [MAIN] Exiting...{RESET}")
+            exit(1)
+        else:
+            print(f"{GREEN}[SUCCESS] [MAIN] {len(targets)} Targets found ✔{RESET}")
+
+    except KeyboardInterrupt:
+        print(f"{YELLOW}[WARNING] [MAIN] CTRL+C detected before starting threads{RESET}")
         exit(0)
-    
-    print(banner)
-    load_backup()
-    target_list = get_targets()
+    except Exception as e:
+        if VERBOSE_DEBUG:
+            print(f"{RED}[EXCEPTION] [MAIN] {e}{RESET}")
+        else:
+            print(f"{RED}[EXCEPTION] [MAIN] An error occurred before starting threafd{RESET}")
+        exit(1)
 
-    flags = dict()
-    now = time.time()
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        futures = [(pool.submit(exploit, ip, None), ip) for ip in target_list]
-        try:
-            while True:
-                completed_futures = list(filter(lambda x: x[0].done(), futures))
-                futures = list(filter(lambda x: not x[0].done(), futures))
-                
-                for future, ip in completed_futures:
-                    target_ip, extracted_flags, exploit_data = future.result()
-                    if extracted_flags:
-                        flags[target_ip] = extracted_flags if target_ip not in flags else flags[target_ip].union(extracted_flags)
-                    futures.append((pool.submit(exploit, target_ip, exploit_data), target_ip))
+    client = Client(targets, backup_manager)
+    try:
+        client.start()
+        print(f"{GREEN}[SUCCESS] [MAIN] Threads started ✔{RESET}\n")
+        healt_check = client.healt_check()
+        while healt_check[0]:
+            time.sleep(HEALT_CHECK_TIME)
+            healt_check = client.healt_check()
+        
+        raise HealtException(healt_check[1])
+        
+    except KeyboardInterrupt:
+        print(f"{YELLOW}[WARNING] [MAIN] CTRL+C detected, collecting flags and exiting{RESET}\n")
 
-                time.sleep(ATTACK_TIME)
-
-                if time.time() - now > SUBMIT_TIME:
-                    submit_flags(flags)
-                    flags = dict()
-                    now = time.time()
-
-        except KeyboardInterrupt:  # CTRL+C
-            try:
-                print(f"\n\nCompleting running threads...")
-                pool.shutdown(wait=True, cancel_futures=True)
-            except KeyboardInterrupt:
-                print(f"\nSubmitting flags before you kill me...")
-            finally:
-                print(f"\nSubmitting flags")
-                submit_flags(flags)
-                exit(0)
+    except HealtException as e:
+        print(f"{RED}[EXCEPTION] [MAIN] Healt check failed -> {e}{RESET}")
+        
+    finally:
+        client.stop()
+        print(f"{GREEN}[SUCCESS] [MAIN] Exiting...{RESET}")
+        exit(0)

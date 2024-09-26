@@ -13,9 +13,9 @@
 import logging
 import time
 from datetime import datetime, timedelta
-from src.utils.config import SUBMISSION_PROTOCOL, COMPETITION_START_TIME, GAME_TICK_DURATION, FLAGS_SUBMISSION_WINDOW
+from src.utils.config import SUBMISSION_PROTOCOL, COMPETITION_START_TIME, GAME_TICK_DURATION, FLAGS_SUBMISSION_WINDOW, PENDING
 import importlib
-from src.database.query import get_all_prending_flags, insert_flags, clear_pending_flags
+from src.database.query import get_all_prending_flags, insert_flags, clear_pending_flags, insert_pending_flags
 
 # Import the submission protocol module
 protocol_module = importlib.import_module("src.submission_service.protocols." + SUBMISSION_PROTOCOL)
@@ -84,10 +84,21 @@ def flag_processing():
 
     # Submit the flags with the protocol module
     flags, accepted_flags, rejected_flags = protocol_module.submit_flags(flags)
+
+    # Flags that are still pending
+    still_pending = list(filter(lambda x: x.status == PENDING, flags))
+
+    # Remove the pending flags from the list
+    flags = list(filter(lambda x: x.status != PENDING, flags))
+
     # Insert the new flags into the database
     insert_flags(flags)
+
     # Delete all the pending flags
     clear_pending_flags()
+
+    # Insert the still pending flags into the database
+    insert_pending_flags(still_pending)
 
     # Print the submission results
     logging.info("\t\t" + "-"*50)
@@ -95,4 +106,5 @@ def flag_processing():
     logging.info(f"\t\t{len(flags)} flags submitted")
     logging.info(f"\t\t{accepted_flags} flags accepted")
     logging.info(f"\t\t{rejected_flags} flags rejected")
+    logging.info(f"\t\t{len(still_pending)} flags still pending")
     logging.info("\t\t" + "-"*50)

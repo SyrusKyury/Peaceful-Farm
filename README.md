@@ -10,10 +10,10 @@
 - Web interface with statistics and charts on attacks
 - Timed flag submission system synchronized with competition rounds
 - Automatic generation of multithreaded Python clients
-- Report generation in CSV format
+- If the Peaceful Farm server is unreachable the client automatically creates a backup of the stolen flag to send them in the future
+- Report in CSV format
 - API route protection through authentication
 - Web interface protection through authentication
-- Configuration via a single `/server/.env` file
 - Management of request concurrency
 - Feedback on failed attacks
 - Real-time logging in the web interface console
