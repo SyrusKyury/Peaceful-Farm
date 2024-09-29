@@ -10,10 +10,10 @@
 # Creation Date: 09/07/2024
 # --------------------------------------------------------------------------------------------------------------------------
 from flask import Flask
-from src.utils.config import SUBMISSION_PROTOCOL
+from settings import SUBMISSION_PROTOCOL
 import importlib
 
-protocol_module = importlib.import_module('src.submission_service.protocols.' + SUBMISSION_PROTOCOL)
+protocol_module = importlib.import_module('plugins.' + SUBMISSION_PROTOCOL)
 
 app = Flask(__name__)
 app.register_blueprint(protocol_module.PROTOCOL_BLUEPRINT)

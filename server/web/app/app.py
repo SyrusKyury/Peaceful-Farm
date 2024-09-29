@@ -1,16 +1,16 @@
 from flask import render_template, request, Response, jsonify
 from src.utils.auth import requires_auth, requires_api_key
-from src.utils.config import *
+from settings import *
 from src.utils import utils
-from src.classes.flag import Flag
-from src.database.query import insert_pending_flags, get_all_flags, filter_query, stats_query
+from src.flag import Flag
+from src.database import insert_pending_flags, get_all_flags, filter_query, stats_query
 from datetime import datetime
 from src.base import app
 import importlib
 import threading
 import logging
 
-protocol_module = importlib.import_module("src.submission_service.protocols." + SUBMISSION_PROTOCOL)
+protocol_module = importlib.import_module("plugins." + SUBMISSION_PROTOCOL)
 
 # -------------------------------------------------------------
 # Routes
@@ -205,8 +205,7 @@ def stats():
 # Main
 # -------------------------------------------------------------
 
-from src.database.database import initalize_db
-from src.submission_service.core import timed_submission
+from src.submission_service import timed_submission
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -214,10 +213,6 @@ if __name__ == '__main__':
     print("Starting the Peaceful Farm server...")
     print("Starting time: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     print(settings_feedback)
-
-    # Initialize the database with the schema
-    print("Initializing the database...")
-    initalize_db()
 
     # Start the background task in a separate thread
     print("Starting the background task...")

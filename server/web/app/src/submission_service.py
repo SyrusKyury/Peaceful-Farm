@@ -13,12 +13,12 @@
 import logging
 import time
 from datetime import datetime, timedelta
-from src.utils.config import SUBMISSION_PROTOCOL, COMPETITION_START_TIME, GAME_TICK_DURATION, FLAGS_SUBMISSION_WINDOW, PENDING
+from settings import SUBMISSION_PROTOCOL, COMPETITION_START_TIME, GAME_TICK_DURATION, FLAGS_SUBMISSION_WINDOW, PENDING
 import importlib
-from src.database.query import get_all_prending_flags, insert_flags, clear_pending_flags, insert_pending_flags
+from src.database import get_all_prending_flags, insert_flags, clear_pending_flags, insert_pending_flags
 
 # Import the submission protocol module
-protocol_module = importlib.import_module("src.submission_service.protocols." + SUBMISSION_PROTOCOL)
+protocol_module = importlib.import_module("plugins." + SUBMISSION_PROTOCOL)
 
 
 # -----------------------------------------------------------------------------------

@@ -1,22 +1,29 @@
-# --------------------------------------------------------------------------------------------------------------------------
-# Desc: This file contains the database queries. The queries are used to interact with the database. The queries are used to:
-# - Get all the pending flags (get_all_prending_flags)
-# - Insert flags into the flags table (insert_flags)
-# - Clear all the pending flags (clear_pending_flags)
-# - Insert pending flags into pending_flags table (insert_pending_flags)
-# - Get all the flags + pending flags (get_all_flags)
-# - Filter the flags based on a group (filter_query)
-# - Get the stats for a specific type and value (stats_query) 
-#
-# Version: 1.0
-# Author: Raffaele D'Ambrosio
-# Full Path: server/web/app/src/database/query.py
-# Creation Date: 09/07/2024
-# --------------------------------------------------------------------------------------------------------------------------
-from src.database.database import mysql
-from src.classes.flag import Flag
+from flask_mysqldb import MySQL
+from settings import MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE
 from src.base import app
+from time import sleep
+from src.flag import Flag
 from datetime import datetime
+
+app.config['MYSQL_HOST'] = 'db'
+app.config['MYSQL_USER'] = MYSQL_USER
+app.config['MYSQL_PASSWORD'] = MYSQL_PASSWORD
+app.config['MYSQL_DB'] = MYSQL_DATABASE
+mysql = MySQL(app)
+
+
+def wait_for_db_connection(self):
+    """
+    Wait for the database to be ready.
+    """
+    with self.app.app_context():
+        while True:
+            try:
+                self.mysql.connection.ping()
+                print("Connection established")
+                break
+            except Exception as e:
+                sleep(1)
 
 def get_all_prending_flags():
     with app.app_context():

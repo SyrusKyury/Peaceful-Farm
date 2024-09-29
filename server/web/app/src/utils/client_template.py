@@ -82,7 +82,7 @@ def exploit(target_ip : str, exploit_data : any = None) -> set[str]:
 
     finally:
         # Don't touch this, it will return only valid flags
-        return set(filter(lambda f: re.match(FLAG_REGEX, f), flags))
+        return set(filter(lambda f: re.match(FLAG_REGEX, f), flags)), exploit_data
 
 
 #------------------------------------------------------------------------------
@@ -153,7 +153,7 @@ class ExploitThread(threading.Thread):
         suicide_countdown : int = SUICIDE_COUNTDOWN
 
         while suicide_countdown > 0 and not self.stop_event.is_set():
-            flags = exploit(self.target_ip, self.exploit_data)
+            flags, self.exploit_data = exploit(self.target_ip, self.exploit_data)
             if len(flags) > 0:
                 self.queue.put((self.target_ip, flags))
                 suicide_countdown = SUICIDE_COUNTDOWN
@@ -178,7 +178,6 @@ class SubmissionManager(threading.Thread):
         super().__init__()
         self.stop_flag_submission = stop_flag_submission
         self.backup_manager = backup_manager
-        self.exploit_data = None
         self.flags = dict()
         self.queue = queue
 

@@ -12,7 +12,7 @@
 # --------------------------------------------------------------------------------------------------------------------------
 
 from flask import request, render_template
-from src.utils.config import *
+from settings import *
 
 def check_auth(username, password):
     for account in ACCOUNTS:
