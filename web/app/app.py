@@ -3,7 +3,7 @@ from src.utils.auth import requires_auth, requires_api_key
 from settings import *
 from src.utils import utils
 from src.flag import Flag
-from src.database import insert_pending_flags, get_all_flags, filter_query, stats_query
+from src.database import insert_pending_flags, get_all_flags, filter_query, stats_query, wait_for_db_connection
 from datetime import datetime
 from src.base import app
 import importlib
@@ -213,6 +213,8 @@ if __name__ == '__main__':
     print("Starting the Peaceful Farm server...")
     print("Starting time: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     print(settings_feedback)
+
+    wait_for_db_connection()
 
     # Start the background task in a separate thread
     print("Starting the background task...")
