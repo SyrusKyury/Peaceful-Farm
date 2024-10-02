@@ -12,14 +12,14 @@ app.config['MYSQL_DB'] = MYSQL_DATABASE
 mysql = MySQL(app)
 
 
-def wait_for_db_connection(self):
+def wait_for_db_connection():
     """
     Wait for the database to be ready.
     """
-    with self.app.app_context():
+    with app.app_context():
         while True:
             try:
-                self.mysql.connection.ping()
+                mysql.connection.ping()
                 print("Connection established")
                 break
             except Exception as e:
