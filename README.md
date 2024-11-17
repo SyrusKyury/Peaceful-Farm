@@ -2,7 +2,7 @@
 ![Peaceful-Farm-Logo](docs/logo.png)
 
 ## Introduction
-**Peaceful Farm** is an Exploit Manager designed for CCIT, its main components are:
+**Peaceful Farm** is an Exploit Manager designed for Attack Defence CTFs, its main components are:
 - **Peaceful Farm Server**: The Peaceful Farm Server gathers flags from clients and submits them to the game server. It also provides a Web Interface enriched with statistics.
 - **Peaceful Farm Client**: The Peaceful Farm Client exploits adversaries' services, gathers flags and sends them to the Peaceful Farm Server.
 
