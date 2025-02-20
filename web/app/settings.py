@@ -22,9 +22,11 @@ import os
 # Set to True to enable debug mode for the Flask application.
 # WARNING: Do not enable debug mode in competition because it starts
 # two threads to submit flags instead of one.
-FLASK_DEBUG = False
+FLASK_DEBUG = True
 
-# Set to True to enable debug mode for flag submission.
+# Set to True to enable plugin debug mode for flag submission.
+# This will emulate the submission of flags by sending them to peaceful farm itself.
+# Peaceful farm will then respond emulating the behavior of the real A/D infrastructure.
 # WARNING: Not every plugin supports debug mode.
 FLAGS_SUBMISSION_DEBUG = True
 

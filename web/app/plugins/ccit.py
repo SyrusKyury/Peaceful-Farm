@@ -2,14 +2,18 @@
 # Desc: Protocol class definition for Cyber Challenge Italy (CCIT). It is used to submit flags to the submission server
 # It will send a PUT request to the submission server with the flags to submit and will receive the status of the flags.
 # 
-# Version: 1.1
+# Version: 1.2.1
 # Author: Raffaele D'Ambrosio
-# Full Path: server/web/app/src/submission_service/protocols/ccit.py
+# Full Path: web/app/src/submission_service/protocols/ccit.py
 # Creation Date: 09/07/2024
+#
+# Changelog:
+# 1.2.1 -> Added the flag ids endpoint to retrieve the flag ids from the submission server.
 # --------------------------------------------------------------------------------------------------------------------------
 
 from settings import FLAGS_SUBMISSION_DEBUG, PEACEFUL_FARM_SERVER_PORT, ACCEPTED, REJECTED
 from src.flag import Flag
+from src.utils.auth import requires_api_key
 from flask import request, Blueprint
 import random
 import requests
@@ -64,7 +68,7 @@ def submit_flags(flags : list[Flag]) -> tuple[list[Flag], int, int]:
     server_response = requests.put(URL, headers={'X-Team-Token': SUBMISSION_SERVER_TEAM_TOKEN}, json=flags_list).text
     server_response = json.loads(server_response)
     
-    new_flags = []
+    updated_flags = []
     accepted_flags = 0
 
     # Check the server response and update the flags' status and message
@@ -79,11 +83,11 @@ def submit_flags(flags : list[Flag]) -> tuple[list[Flag], int, int]:
         result_flag = [i for i in flags if i.flag == res['flag']][0]
         result_flag.status = status
         result_flag.message = res['msg']
-        new_flags.append(result_flag)
+        updated_flags.append(result_flag)
 
     rejected_flags = len(flags) - accepted_flags
 
-    return new_flags, accepted_flags, rejected_flags
+    return updated_flags, accepted_flags, rejected_flags
 
 
 # -----------------------------------------------------------------------------------
@@ -94,6 +98,7 @@ def submit_flags(flags : list[Flag]) -> tuple[list[Flag], int, int]:
 PROTOCOL_BLUEPRINT = Blueprint('protocol', __name__)
 
 @PROTOCOL_BLUEPRINT.route('/targets', methods=['GET'])
+@requires_api_key
 def targets():
     response = [f"10.60.{i}.1" for i in range(N_TEAMS, 0, -1) if i != NOP_TEAM_ID and i != TEAM_ID]
     return response, 200
@@ -106,6 +111,7 @@ def targets():
 
 
 @PROTOCOL_BLUEPRINT.route('/nop', methods=['GET'])
+@requires_api_key
 def nop():
     response = [f"10.60.{NOP_TEAM_ID}.1"]
     return response, 200
@@ -117,8 +123,8 @@ def nop():
 # This endpoint is used to provide the ip of your team to the client
 # -----------------------------------------------------------------------------------
 
-
 @PROTOCOL_BLUEPRINT.route('/own', methods=['GET'])
+@requires_api_key
 def myteam():
     response = [f"10.60.{TEAM_ID}.1"]
     return response, 200
@@ -130,6 +136,7 @@ def myteam():
 # This endpoint is used to debug the submission service, it will receive flags and
 # will respond as the submission server would do
 # -----------------------------------------------------------------------------------
+
 @PROTOCOL_BLUEPRINT.route('/debug', methods=['PUT'])
 def debug():
     # Getting the request data
@@ -153,6 +160,23 @@ def debug():
         response[-1]['status'] = True if response[-1]['msg'].startswith('Accepted') else False
     return response, 200
     
+
+# -----------------------------------------------------------------------------------
+# Blueprint to get the flag ids
+# -----------------------------------------------------------------------------------
+# This endpoint is used to provide the list of flag ids to the client, it is used
+# to learn data to retrieve flags.
+# -----------------------------------------------------------------------------------
+
+@PROTOCOL_BLUEPRINT.route('/flagids', methods=['GET'])
+@requires_api_key
+def flagids():
+    if FLAGS_SUBMISSION_DEBUG:
+        result = {f"dummy_service{i}" : [f"dummy_data{i}_{j}" for j in range(5)] for i in range(5)}
+        return result, 200
+    
+    flagids_result = requests.get(f"http://{SUBMISSION_SERVER_IP}:{SUBMISSION_SERVER_PORT}/flagids").json()
+    return flagids_result
 
 # -----------------------------------------------------------------------------------
 # Get url 

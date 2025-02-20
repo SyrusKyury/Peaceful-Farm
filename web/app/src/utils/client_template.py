@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import threading, queue, requests, os, time, re, random, string
 
 #------------------------------------------------------------------------------
@@ -22,10 +23,10 @@ VERBOSE_DEBUG: bool = False
 # 0: Attack the nop team (to test your exploit before spoiling to the other teams)
 # 1: Attack your own team (to test if you fixed the vulnerability you're exploiting)
 # 2: Attack your opponents (to get and submit the flags)
-EXPLOIT_DEBUG: int = 2
+EXPLOIT_DEBUG: int = 0
 
 # The name of the service being exploited.
-SERVICE: str = "Example"
+SERVICE: str = "CHANGE_ME"
 
 # The name of the exploit being used.
 EXPLOIT = "%s"
@@ -246,9 +247,9 @@ class SubmissionManager(threading.Thread):
         json = {
             "api_key": API_KEY,
             "flags": self.flags,
-            "exploit": EXPLOIT,
-            "service": SERVICE,
-            "nickname": NICKNAME
+            "exploit": EXPLOIT.capitalize(),
+            "service": SERVICE.capitalize(),
+            "nickname": NICKNAME.capitalize()
         }
 
         response = requests.post(f"http://{SERVER_IP}:{SERVER_PORT}/flags", json=json)
@@ -554,7 +555,10 @@ banner = """
 
 
 if __name__ == "__main__":
-    # Print banner
+    if SERVICE == "CHANGE_ME":
+        print(f"{RED}[FAIL] [MAIN] Please set the SERVICE constant to the name of the service you are exploiting{RESET}")
+        exit(1)
+
     print(YELLOW + banner + RESET)
     print(f"{SKY}[Service]{RESET} {SERVICE}")
     print(f"{SKY}[Exploit]{RESET} {EXPLOIT}")

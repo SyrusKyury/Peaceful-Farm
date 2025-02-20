@@ -14,27 +14,30 @@ import io
 import base64
 
 nouns = [
-    'Napoletano', 'Pizzaiolo', 'San Gennaro', 'Vesuvio', 'Mandolino', 'Lavezzi', 'Maradona', 
-    'Hamsik', 'Mertens', 'Insigne', 'D10S', 'Cavallo','Babà', 'Pulcinella', 'Limoncello',
-    'Cane', 'Asino', 'Gatto', 'Sofia', 'Raffaele', 'Lorenzo', 'Alessio', 'Federico', 'Luca', 'Gennaro',
-    'Drago', 'Spalletti', 'Koulibaly', 'ADL', 'Antonio Conte', 'Kim Kim Kim', 'Kvara'
+    'panda', 'cow', 'dog', 'cat', 'elephant', 'tiger', 'lion', 'cheetah', 'wolf', 'fox', 'bear', 'penguin', 'dolphin',
+    'whale', 'shark', 'octopus', 'squid', 'jellyfish', 'starfish', 'seahorse', 'crab', 'lobster', 'scorpion', 'spider',
+    'ant', 'bee', 'wasp', 'butterfly', 'moth', 'dragonfly', 'grasshopper', 'beetle', 'ladybug', 'fly', 'mosquito',
+    'cockroach', 'mantis', 'cicada', 'aphid', 'cricket', 'termite', 'antelope', 'buffalo', 'camel', 'deer', 'giraffe',
+    'hippopotamus', 'horse', 'kangaroo', 'koala', 'leopard', 'monkey', 'orangutan', 'panda', 'penguin', 'rhinoceros',
+    'sloth', 'tiger', 'zebra', 'bat', 'bear', 'beaver', 'boar', 'cat', 'chinchilla', 'chipmunk', 'coyote', 'dog',
+    'ferret', 'fox', 'gerbil', 'guinea pig', 'hamster', 'hedgehog', 'mouse', 'rabbit', 'rat', 'squirrel', 'weasel',
+    'badger', 'otter', 'raccoon', 'skunk', 'wolf', 'blue jay', 'cardinal', 'crow', 'dove', 'eagle', 'falcon', 'finch',
+    'goose', 'hawk', 'hummingbird', 'kingfisher', 'owl', 'parrot', 'peacock', 'pelican', 'penguin', 'robin', 'sparrow'
 ]
 
 
 adjectives = [
-    'incazzato', 'monello', 'assassino', 'pazzo', 'scatenato', 'furioso', 'ubriaco', 'sbronzo', 'magico',
-    'invisibile', 'misericordioso', 'veloce', 'ignorante', 'arrabbiato', 'godurioso', 'sorridente',
-    'drogato', 'malato del napoli', 'dopo aver pippato', 'dopo una sbronza', 'dopo aver mangiato la diavola',
-    'dopo aver flaggato', 'sul motorino senza casco', 'con la maglia del napoli', 'con la maglia di Maradona',
-    'che mangia il ragù di mammà', 'allo stadio', 'che guarda la partita in streaming', 'che scappa in Messico',
-    'divino', 'santo', 'sacro', 'misterioso', 'che picchia uno juventino', 'inseguito da un vuo cumprà',
-    'con tre persone sul motorino', 'che festeggia lo scudetto del Napoli', 'che compra il cocco bello',
-    'picchia Agnelli', 'fa cacca nello Juventus Stadium', 'esulta per un gol', 'fa la dab con Obama',
-    'che insulta la Meloni', 'scappa col motorino', 'scippa la borsa a una vecchietta'
+    'crazy', 'lazy', 'sleepy', 'happy', 'sad', 'angry', 'hungry', 'thirsty', 'dirty', 'clean', 'fast', 'slow', 'big',
+    'small', 'tiny', 'huge', 'fat', 'skinny', 'short', 'tall', 'long', 'short', 'old', 'young', 'new', 'fresh', 'rotten',
+    'hot', 'cold', 'warm', 'cool', 'dry', 'wet', 'damp', 'moist', 'hard', 'soft', 'rough', 'smooth', 'sharp', 'dull',
+    'clean', 'dirty', 'clear', 'cloudy', 'foggy', 'sunny', 'rainy', 'windy', 'stormy', 'snowy', 'icy', 'slippery',
+    'noisy', 'quiet', 'loud', 'soft', 'sweet', 'sour', 'bitter', 'salty', 'spicy', 'tasty', 'delicious', 'yummy',
+    'disgusting', 'gross', 'nasty', 'beautiful', 'ugly', 'pretty', 'handsome', 'cute', 'adorable', 'lovely', 'nice',
+    'mean', 'evil', 'wicked', 'good', 'bad', 'great', 'awesome', 'fantastic', 'amazing', 'wonderful', 'excellent'
 ]    
 
 def generate_exploit_name():
-    return random.choice(nouns) + ' ' + random.choice(adjectives) + ' ' + str(random.randint(1, 10)) + str(random.randint(1, 10)) + str(random.randint(1, 10)) + str(random.randint(1, 10))
+    return random.choice(adjectives) + ' ' + random.choice(nouns)
 
 def plot_flag_statistics(accepted: list[int], rejected: list[int], type: str, value: str, t1: datetime, t2: datetime) -> bytes:
     # Bar width

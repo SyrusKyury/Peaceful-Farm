@@ -18,6 +18,7 @@
 - Feedback on failed attacks
 - Real-time logging in the web interface console
 - Emulation of the Submission Server for testing purposes
+- A [simple plugin system](web/app/plugins/README.md) to update and adapt the system with ease
 
 ## Architecture
 ![Architecture](docs/architecture.png)
@@ -29,11 +30,10 @@
 
 **Client**:
 - Python3
-- Requests library `pip install requests`
 
 ## Getting started
 ### Server
-To start using **Peaceful Farm**, you need to launch the server. This can be achieved by running one of the following commands in the `/server` directory:
+To start using **Peaceful Farm**, you need to launch the server. This can be achieved by running one of the following commands in the project directory:
 
 
 ```bash
@@ -47,12 +47,16 @@ docker compose up -d --build
 
 Your server is now ready to use!
 
-You can customize your server by modifing the `/server/.env` file. A more detailed explanation of each option is provided [here](/server/README.md)
+You can customize your server by modifing [.env](.env) and/or [web/app/settings.py](web/app/settings.py).
+> ⚠️ **Warning** <br> Every [plugin](web/app/plugins) may have its own settings!
 
 ### Client
-The client can be downloaded either from your **Peaceful Farm Server** by visiting the index page or from the [*official Peaceful Farm Repository*](https://github.com/SyrusKyury/Peaceful-Farm/blob/main/client/client.py). If the client is downloaded from your **Peaceful Farm Server**, it will already be set up with the data of your server. Otherwise, you'll need to set it up manually. A more detailed explanation of each option is provided [here](/client/README.md).
-
-**In both cases, you'll need to specify in your client the name of the service you're attacking (since Peaceful Farm doesn't have a crystal ball).**
+The client can be downloaded from your **Peaceful Farm Server** by visiting the index page.
 
 To use the client, you just need to code your exploit in the *exploit* function. The client will automatically launch this function on every opponent team in parallel and send the flags you gather to your **Peaceful Farm Server**.
 
+The *exploit* function takes two parameters:  
+- **target_ip**: The IP address of the machine being targeted.  
+- **exploit_data**: A storage container for any reusable data needed for future exploitations.  
+
+For example, if you're attacking a Flask web app that leaks its secret, you wouldn't want to steal the token every time the exploit runs—doing so could expose your method to others. Instead, storing and reusing the token in *exploit_data* helps maintain stealth and efficiency.  
