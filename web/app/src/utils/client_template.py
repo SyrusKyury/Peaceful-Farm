@@ -71,10 +71,16 @@ def exploit(target_ip : str, exploit_data : any = None) -> set[str]:
         #   Returns:
         #       dict: the challenge's flag ids
         #
+        # - Utils.random_upper_lower_string
+        #   Randomly changes the case of the characters in the string.
+        #   Arguments:
+        #       string: str, the string to change the case of
+        #   Returns:
+        #       str: the string with randomly changed case
         # -------------------------------------------------------------------------
         # Have fun!
         # -------------------------------------------------------------------------
-
+        
     except:
         # You can handle exceptions here. Please don't let your exploit crash,
         # this would stop the attack for that target. If you want to ignore the
@@ -537,8 +543,26 @@ class Utils:
                     print(f"{RED}[FAIL] [FlagIds] Failed to get flag ids, try {str(i+1)}{RESET}")
         
         return None
+    
 
+    @staticmethod
+    def random_upper_lower_string(string :str) -> str:
+        r"""
+        Randomly change the case of the characters in the string.
+        
+        Example:
 
+        - input: "UNION SELECT * FROM users"
+        - output: "UNiOn sElEcT * fRoM USErs"
+        """
+        result = ""
+        for i in string:
+            if random.choice([True, False]):
+                result += i.upper()
+            else:
+                result += i.lower()
+        
+        return result
 
 #------------------------------------------------------------------------------
 # Banner
