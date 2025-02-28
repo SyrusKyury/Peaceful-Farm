@@ -45,7 +45,13 @@
         <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-white-700">
             <div id="progress-bar" class="bg-[#54c168] h-2.5 rounded-full dark:bg-[#54c168]" style="width: 0%"></div>
         </div>
-        
+
+
+		<!-- Loading Screen -->
+		<div id="loading-screen" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex flex-col items-center justify-center hidden z-50">
+			<div class="animate-spin rounded-full h-16 w-16 border-t-4 border-white mb-4"></div>
+			<p class="text-white text-lg font-semibold">Applying changes...</p>
+		</div>
 
 		<!-- Background with moving clouds -->
 		<div id="background-wrap" class="fixed top-0 left-0 w-full h-full -z-10">
@@ -82,126 +88,106 @@
 			</div>
 		</div>
 
-		<!-- Centered Content Container -->
-		<div class="relative bg-white bg-opacity-90 shadow-lg rounded-xl p-8 w-11/12 mt-20 flex flex-col">
-			<!-- Chart Canvas -->
-			<canvas id="chart"></canvas>
-			<!-- Search bar (Row Layout) -->
-			<div class="mt-4 flex flex-row items-center justify-between w-full">
-				<input type="text" id="search" class="w-full px-4 py-2 border border-[#6ec5e9] rounded-lg focus:ring-4 focus:ring-blue-300" placeholder="Search...">
-			</div>
-			<!-- Button Container (Row Layout) -->
-			<div class="mt-4 flex flex-row items-center justify-between w-full">
-				<div class="flex w-full overflow-hidden">
-					<button id="ip-button" type="button" class="flex flex-row items-center justify-center flex-1 py-1 px-3 bg-[#6ec5e9] text-white font-bold rounded-l-lg hover:bg-[#55a5c0] focus:ring-4 focus:ring-blue-300 whitespace-nowrap" onclick="handleButtonClick(this)">
-					<img src="/static/ip.png" class="w-4 h-4 mr-2"> IP Addresses
-					</button>
-					<button id="exploit-button" type="button" class="flex flex-row items-center justify-center flex-1 py-1 px-3 bg-[#6ec5e9] text-white font-bold border-l border-white hover:bg-[#55a5c0] focus:ring-4 focus:ring-blue-300 whitespace-nowrap" onclick="handleButtonClick(this)">
-					<img src="/static/exploit.png" class="w-4 h-4 mr-2"> Exploit
-					</button>
-					<button id="nickname-button" type="button" class="flex flex-row items-center justify-center flex-1 py-1 px-3 bg-[#6ec5e9] text-white font-bold border-l border-white hover:bg-[#55a5c0] focus:ring-4 focus:ring-blue-300 whitespace-nowrap" onclick="handleButtonClick(this)">
-					<img src="/static/nickname.png" class="w-4 h-4 mr-2"> Attacker
-					</button>
-					<button id="service-button" type="button" class="flex flex-row items-center justify-center flex-1 py-1 px-3 bg-[#6ec5e9] text-white font-bold rounded-r-lg border-l border-white hover:bg-[#55a5c0] focus:ring-4 focus:ring-blue-300 whitespace-nowrap" onclick="handleButtonClick(this)">
-					<img src="/static/service.png" class="w-4 h-4 mr-2"> Service
-					</button>
+    <!-- Settings Form Container -->
+    <div id="settings-container" class="relative bg-white bg-opacity-90 shadow-lg rounded-2xl p-8 w-11/12 md:w-1/2 text-center mt-20 mb-20">
+		<form id="settings-form" class="space-y-6" method="POST">
+			<h2 class="text-3xl font-semibold text-gray-800 mb-8">⚙️ Peaceful Farm Settings</h2>
+			{% for key, setting in SETTINGS.items() %}
+				<div class="flex flex-col items-start">
+					<label for="{{ key }}" class="block text-lg font-medium text-gray-700">{{ setting.name }}</label>
+					<p class="text-sm text-gray-500 mb-2">{{ setting.description }}</p>
+		
+					{% if setting.value is boolean %}
+						<label class="inline-flex items-center cursor-pointer">
+							<input type="checkbox" id="{{ key }}" name="settings[{{ key }}]" {% if setting.value %}checked{% endif %} value="true" class="sr-only peer">
+                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-white-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-white-600 peer-checked:bg-[#6ec5e9] dark:peer-checked:bg-[#6ec5e9]"></div>
+                        </label>
+					{% elif setting.value is string %}
+						<input type="text" id="{{ key }}" name="settings[{{ key }}]" value="{{ setting.value }}" class="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+					{% elif setting.value is number %}
+						<input type="number" id="{{ key }}" name="settings[{{ key }}]" value="{{ setting.value }}" class="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+					{% elif setting.value is iterable %}
+						<textarea id="{{ key }}" name="settings[{{ key }}]" class="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows="5">[{{ setting.value | join(', ') }}]</textarea>
+					{% else %}
+						<input type="text" id="{{ key }}" name="settings[{{ key }}]" value="{{ setting.value }}" class="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+					{% endif %}
 				</div>
-			</div>
-			<!-- Table -->
-			<table class="min-w-full table-auto border-collapse pt-6 rounded-lg overflow-hidden mt-4">
-				<thead class="bg-[#54c168] text-white">
-					<tr>
-						<th class="px-4 py-2 border-b">
-							<img src="/static/exploit.png" class="inline-block w-4 h-4 ml-2">
-							Exploit 
-						</th>
-						<th class="px-4 py-2 border-b">
-							<img src="/static/flag.png" class="inline-block w-4 h-4 ml-2">
-							Accepted flags 
-						</th>
-						<th class="px-4 py-2 border-b">
-							<img src="/static/flag.png" class="inline-block w-4 h-4 ml-2">
-							Rejected flags 
-						</th>
-						<th class="px-4 py-2 border-b">
-							<img src="/static/flag.png" class="inline-block w-4 h-4 ml-2">
-							Pending flags 
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-				</tbody>
-			</table>
-		</div>
+			{% endfor %}
+		
+			<h2 class="text-3xl font-semibold text-gray-800 mb-8">⚙️ Plugin settings</h2>
+			{% for key, setting in PLUGIN_SETTINGS.items() %}
+				<div class="flex flex-col items-start">
+					<label for="{{ key }}" class="block text-lg font-medium text-gray-700">{{ setting.name }}</label>
+					<p class="text-sm text-gray-500 mb-2">{{ setting.description }}</p>
+		
+					{% if setting.value is boolean %}
+					<label class="inline-flex items-center cursor-pointer">
+						<input type="hidden" name="plugin_settings[{{ key }}]" value="false">
+						<input type="checkbox" id="{{ key }}" name="plugin_settings[{{ key }}]" {% if setting.value %}checked{% endif %} value="true" class="sr-only peer">
+						<div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-white-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-white-600 peer-checked:bg-[#6ec5e9] dark:peer-checked:bg-[#6ec5e9]"></div>
+					</label>
+					{% elif setting.value is string %}
+						<input type="text" id="{{ key }}" name="plugin_settings[{{ key }}]" value="{{ setting.value }}" class="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+					{% elif setting.value is number %}
+						<input type="number" id="{{ key }}" name="plugin_settings[{{ key }}]" value="{{ setting.value }}" class="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+					{% elif setting.value is iterable %}
+						<textarea id="{{ key }}" name="plugin_settings[{{ key }}]" class="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows="5"> {{(setting.value | tojson) }}]</textarea>
+					{% else %}
+						<input type="text" id="{{ key }}" name="plugin_settings[{{ key }}]" value="{{ setting.value }}" class="w-full p-3 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+					{% endif %}
+				</div>
+			{% endfor %}
+		
+			<button type="button" class="mt-6 bg-[#6ec5e9] text-white p-3 rounded-lg text-lg font-medium hover:bg-[#55a5c0] transition-all w-full" onclick="sendSettings()">Save All Settings</button>
+		</form>
+		
+    </div>
+
 		<div id="notifications-container" class="fixed bottom-4 right-4 space-y-2"></div>
 		<script>
-			const ctx = document.getElementById('chart').getContext('2d');
 			const notification_sound = new Audio('/static/snd/notification.mp3');
-			let chart;
+			document.addEventListener("keydown", function(event) {
+				if (event.key === "Enter") {
+					sendSettings();
+				}
+			});
 			
-			// Function to handle button click
-			function handleButtonClick(button) {
-			    if (button.classList.contains('bg-[#55a5c0]'))
-			        return
-			
-			    // Reset all buttons to default state
-			    document.querySelectorAll('.flex-row button').forEach(btn => {
-			        btn.classList.remove('bg-[#55a5c0]');
-			        btn.classList.add('bg-[#6ec5e9]');
-			    });
-			
-			    // Set the clicked button to "pressed" state
-			    button.classList.remove('bg-[#6ec5e9]');
-			    button.classList.add('bg-[#55a5c0]');
-			
-			    const buttonId = button.id.replace('-button', '');
-			    updateTable(buttonId);
-				plot(buttonId);
-			}
-			
-			function updateTable(filterGroup) {
-			    fetch('/group?group=' + filterGroup)
-			    .then(response => response.json())
-			    .then(response => {
-			        const tbody = document.querySelector("table tbody");
-			        tbody.innerHTML = "";
-			        
-			        // Update the first column name with the filterGroup
-			        let firstColumnHeader = document.querySelector("table thead th:first-child");
-			        firstColumnHeader.innerHTML = `
-			        <img src="/static/${filterGroup}.png" class="inline-block w-4 h-4 ml-2">
-			        ${filterGroup.charAt(0).toUpperCase() + filterGroup.slice(1)}
-			        `;
-			
-			
-			        response.forEach((row, index) => {
-			            let trClass = index % 2 === 0 ? "bg-[#eaf9fb]" : "bg-white";
-			            
-			            let tr = document.createElement("tr");
-			            tr.className = trClass;
-			            
-						row.forEach((cellData, index) => {
-							let td = document.createElement("td");
-							td.className = "px-4 py-2 border-b text-[#55a5c0]";
+			function sendSettings() {
+				// Crea un oggetto per raccogliere tutte le impostazioni
+				const formData = {};
 
-							if (index === 0) {
-								let a = document.createElement("a");
-								a.href = "/info?type="+filterGroup+"&value="+cellData;
-								a.textContent = cellData;
-								a.className = "text-[#54c168] underline hover:text-[#078030] underline";
-								td.appendChild(a);
-							} else {
-								td.textContent = cellData;
-							}
+				// Raccogli i dati delle impostazioni generali
+				const settingsElements = document.querySelectorAll('#settings-form input, #settings-form textarea');
+				settingsElements.forEach((element) => {
+					if (element.type === 'checkbox') {
+						// Se l'elemento è una checkbox, controlla se è selezionato
+						formData[element.name] = element.checked ? 'true' : 'false';
+					} else {
+						// Altrimenti, prendi il valore dell'input o del textarea
+						formData[element.name] = element.value;
+					}
+				});
 
-							tr.appendChild(td);
-						});
-
-			            
-			            tbody.appendChild(tr);
-			        });
-			    })
-			    .catch(error => console.error("Error loading data:", error));
+				console.log(JSON.stringify(formData))
+				loadingTimeout = setTimeout(() => {
+					document.getElementById('loading-screen').classList.remove('hidden');
+				}, 2000);
+				fetch('/settings', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(formData)
+				})
+				.then(response => {
+					window.location.href = response.url;
+				})
+				.catch(error => console.error('Error:', error))
+				.finally(() => {
+				// Hide loading screen after request completes
+				document.getElementById("loading-screen").classList.add("hidden");
+    });
+				
 			}
 			
 			function showNotification(message, color) {
@@ -215,14 +201,6 @@
                 {
                     notification.classList.add('bg-[#6ec5e9]', 'text-white', 'p-4', 'rounded-lg', 'shadow-lg', 'flex', 'items-center', 'justify-between', 'space-x-2');
                 }
-                // Update table
-                document.querySelectorAll('.flex-row button').forEach(btn => {
-                    if(btn.classList.contains('bg-[#55a5c0]'))
-                    {
-                        updateTable(btn.id.replace('-button', ''));
-						plot(btn.id.replace('-button', ''));
-                    }
-                });
 				notification_sound.play();
                 // Create the message content with HTML formatting
                 const messageElement = document.createElement('div');
@@ -286,94 +264,6 @@
             progressBar.style.width = `${tickPercentage}%`;
         }
 
-		function getRandomColor() {
-		return `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 1)`;
-		}
-
-
-		function plot(group) {
-			fetch('/stats?group=' + group)
-				.then(response => response.json())
-				.then(data => {
-				// Estrai tutti gli IP
-				const entries = Object.values(data).flatMap(tick => Object.keys(tick));
-				const uniqueEntries = [...new Set(entries)];
-
-				// Inizializza il nuovo dizionario
-				const result = uniqueEntries.reduce((acc, entry) => {
-				acc[`${entry} accepted`] = [];
-				acc[`${entry} rejected`] = [];
-				return acc;
-				}, {});
-
-				// Ordina i tick per chiave (timestamp)
-				const sortedTicks = Object.keys(data).sort();
-
-				// Itera in ordine sui tick e aggiorna il dizionario result
-				sortedTicks.forEach(tick => {
-				const tickData = data[tick];
-
-				uniqueEntries.forEach(entry => {
-					const accepted = tickData[entry]?.accepted || 0;
-					const rejected = tickData[entry]?.rejected || 0;
-					
-					result[`${entry} accepted`].push(accepted);
-					result[`${entry} rejected`].push(rejected);
-				});
-				});
-
-				const datasets = Object.keys(result).map(key => {
-				const color = getRandomColor();
-				return {
-					label: key,
-					data: result[key],
-					borderColor: color,
-					backgroundColor: color.replace(", 1)", ", 0.2)"),
-					borderWidth: 2,
-					tension: 0.3
-				};
-				});
-
-				// 7. Creare il grafico con Chart.js
-				if (chart) {
-					chart.destroy();
-				}
-
-				const chartCanvas = document.getElementById('chart');
-				chartCanvas.width = 600;  // Larghezza fissa
-				chartCanvas.height = 100; // Altezza fissa
-
-				chart = new Chart(ctx, {
-				type: 'line',
-				data: {
-					labels: sortedTicks, // Asse X con i tick
-					datasets: datasets
-				},
-				options: {
-					responsive: true,
-					scales: {
-					y: {
-						beginAtZero: true
-					}
-					}
-				}
-				});
-
-
-				})
-				.catch(error => console.error('Errore durante il fetch:', error));
-		}
-
-		document.getElementById('search').addEventListener('input', function() {
-			const searchValue = this.value.toLowerCase();
-			const rows = document.querySelectorAll("table tbody tr");
-
-			rows.forEach(row => {
-				const firstColumnText = row.querySelector("td:first-child")?.textContent.toLowerCase() || "";
-				row.style.display = firstColumnText.includes(searchValue) ? "" : "none";
-			});
-		});
-
 		document.getElementById('submit-flag-btn').addEventListener('click', function(event) {
 			event.preventDefault(); // Evita la navigazione predefinita
 			document.getElementById('flag-popup').classList.remove('hidden');
@@ -426,7 +316,6 @@
 
         // Update the progress bar every 200 milliseconds
         setInterval(updateProgressBar, 200);
-		document.getElementById('ip-button').click();
 		</script>
 	</body>
 </html>

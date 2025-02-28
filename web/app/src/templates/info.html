@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Peaceful Farm</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+		<link rel="stylesheet" href="/static/css/clouds.css">
+		<link rel="icon" href="static/favicon.ico" type="image/x-icon">
+	</head>
+	<body class="bg-blue-200 flex flex-col items-center justify-start min-h-screen relative">
+		<!-- Top Menu-->
+		<nav class="top-0 left-0 w-full bg-white bg-opacity-70 shadow-md flex items-center justify-between p-4 z-50 h-16">
+			<!-- App Icon -->
+			<a href="/">
+				<div class="flex items-center space-x-2">
+					<img src="/static/logo.png" alt="App Icon" class="h-24 w-42">
+				</div>
+			</a>
+			<!-- Menu Items -->
+			<div class="flex space-x-2 items-stretch h-full">
+                <a href="old.html" title="Published exploits" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
+                <img src="/static/old.png" class="w-6 h-6">
+                </a>
+                <a href="flag.html" title="Watch running exploits" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
+				<img src="/static/eye.png" class="w-6 h-6">
+				</a>    
+				<a href="flag.html" title="Submit a flag manually" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
+				<img src="/static/flag.png" class="w-6 h-6">
+				</a>
+				<a href="csv" title="Download Flags as CSV" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
+				<img src="/static/csv.png" class="w-6 h-6">
+				</a>
+				<a href="client" title="Download Client" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
+				<img src="/static/exploit.png" class="w-6 h-6">
+				</a>
+				<a href="settings" title="Settings" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
+				<img src="/static/settings.png" class="w-6 h-6">
+				</a>
+				<a href="logout" title="Logout" class="flex items-center justify-center bg-[#54c168] hover:bg-[#078030] rounded-xl p-3 transition-all duration-200">
+				<img src="/static/logout.png" class="w-6 h-6">
+				</a>
+			</div>
+		</nav>
+
+        <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-white-700">
+            <div id="progress-bar" class="bg-[#54c168] h-2.5 rounded-full dark:bg-[#54c168]" style="width: 0%"></div>
+        </div>
+        
+
+		<!-- Background with moving clouds -->
+		<div id="background-wrap" class="fixed top-0 left-0 w-full h-full -z-10">
+			<div class="x1">
+				<div class="cloud"></div>
+			</div>
+			<div class="x2">
+				<div class="cloud"></div>
+			</div>
+			<div class="x3">
+				<div class="cloud"></div>
+			</div>
+			<div class="x4">
+				<div class="cloud"></div>
+			</div>
+			<div class="x5">
+				<div class="cloud"></div>
+			</div>
+		</div>
+		<!-- Centered Content Container -->
+		<div class="relative bg-white bg-opacity-90 shadow-lg rounded-xl p-8 w-11/12 mt-20 flex flex-col">
+            <h1 class="text-3xl font-bold text-[#6ec5e9] text-center tracking-tight">
+                REJECTED FLAGS INFO <br>{{data_type}}: {{value}}
+            </h1>              
+            <!-- Table -->
+			<table class="min-w-full table-auto border-collapse pt-6 rounded-lg overflow-hidden mt-4">
+				<thead class="bg-[#54c168] text-white">
+					<tr>
+						<th class="px-4 py-2 border-b">
+							<img src="/static/msg.png" class="inline-block w-4 h-4 ml-2">
+							Message 
+						</th>
+						<th class="px-4 py-2 border-b">
+							<img src="/static/date.png" class="inline-block w-4 h-4 ml-2">
+							Date
+						</th>
+						<th class="px-4 py-2 border-b">
+							<img src="/static/flag.png" class="inline-block w-4 h-4 ml-2">
+							Flag
+						</th>
+					</tr>
+				</thead>
+				<tbody>
+				</tbody>
+			</table>
+		</div>
+		<div id="notifications-container" class="fixed bottom-4 right-4 space-y-2"></div>
+		<script>
+			const notification_sound = new Audio('/static/snd/notification.mp3');
+			let chart;
+			
+			function updateTable() {
+                fetch('/info' + window.location.search, {
+                    method: 'GET',
+                    headers: {
+                        'raw-data': 'true'
+                    }
+                })
+                .then(response => response.json())
+                .then(response => {
+                    // Sort by the second column (index 1) in descending order
+                    response.sort((a, b) => new Date(b[1]) - new Date(a[1]));
+
+                    const tbody = document.querySelector("table tbody");
+                    tbody.innerHTML = "";
+
+                    response.forEach((row, index) => {
+                        let trClass = index % 2 === 0 ? "bg-[#eaf9fb]" : "bg-white";
+
+                        let tr = document.createElement("tr");
+                        tr.className = trClass;
+
+                        row.forEach(cellData => {
+                            let td = document.createElement("td");
+                            td.className = "px-4 py-2 border-b text-[#55a5c0]";
+                            td.textContent = cellData;
+                            tr.appendChild(td);
+                        });
+
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(error => console.error("Error loading data:", error));
+            }
+
+			
+			function showNotification(message, color) {
+                // Create a new notification element
+                const notification = document.createElement('div');
+                if (color === "green")
+                {
+                    notification.classList.add('bg-[#54c168]', 'text-white', 'p-4', 'rounded-lg', 'shadow-lg', 'flex', 'items-center', 'justify-between', 'space-x-2');
+                }
+                else if (color === "blue")
+                {
+                    notification.classList.add('bg-[#6ec5e9]', 'text-white', 'p-4', 'rounded-lg', 'shadow-lg', 'flex', 'items-center', 'justify-between', 'space-x-2');
+                    updateTable();
+                }
+
+				notification_sound.play();
+                // Create the message content with HTML formatting
+                const messageElement = document.createElement('div');
+                messageElement.innerHTML = message; // Insert HTML content to format the message
+                
+                // Create the close button
+                const closeButton = document.createElement('button');
+                closeButton.classList.add('text-white', 'font-bold');
+                closeButton.innerHTML = '&times;';
+                closeButton.onclick = function() {
+                    notification.remove();
+                };
+                
+                // Add the message and close button to the notification
+                notification.appendChild(messageElement);
+                notification.appendChild(closeButton);
+                
+                // Add the notification to the container
+                const container = document.getElementById('notifications-container');
+                container.appendChild(notification);
+                
+                // Automatically hide the notification after 5 seconds
+                setTimeout(() => {
+                    notification.remove();  // Remove the notification after 5 seconds
+                }, 10000);
+            }
+
+			
+			// Ascolta le notifiche dal server (Socket.IO)
+			const socket = io.connect('{{address}}');
+			socket.on('message', function(message) {
+			console.log(message);
+			showNotification(message.data, message.color || "green");
+			});
+
+            function calculateTickPercentage(startDate, tickDuration) {
+            // Get the current date and time
+            const currentDate = new Date();
+
+            // Calculate the time difference in milliseconds between the current date and the start date
+            const timeDifference = currentDate - new Date(startDate);
+
+            // Calculate the position within the tick (between 0 and tickDuration)
+            const tickPosition = timeDifference % tickDuration;
+
+            // Calculate the percentage of the tick completed
+            const percentage = (tickPosition / tickDuration) * 100;
+
+            return percentage;
+        }
+
+        function updateProgressBar() {
+            const competitionStartDate = '{{start}}'; // Start date of the competition (ISO format)
+            const tickDuration = '{{tick}}'; // Duration of each tick in milliseconds (e.g., 60,000 ms = 1 minute)
+
+            // Calculate the current progress percentage
+            const tickPercentage = calculateTickPercentage(competitionStartDate, tickDuration);
+
+            // Update the progress bar width based on the calculated percentage
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.width = `${tickPercentage}%`;
+        }
+
+		function getRandomColor() {
+		return `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 1)`;
+		}
+
+
+        // Update the progress bar every 200 milliseconds
+        setInterval(updateProgressBar, 200);
+		updateTable();
+		</script>
+	</body>
+</html>

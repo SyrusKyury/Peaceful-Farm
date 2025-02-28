@@ -11,35 +11,48 @@
 # Creation Date: 09/07/2024
 # --------------------------------------------------------------------------------------------------------------------------
 
-from flask import request, render_template
+from flask import request, render_template, session, redirect
 from settings import *
+import hashlib
 
-def check_auth(username, password):
-    for account in ACCOUNTS:
+def check_credentials(username, password):
+    for account in SETTINGS['ACCOUNTS']['value']:
         if account['username'] == username and account['password'] == password:
             return True
     return False
 
-def authenticate():
-    return render_template('403.html'), 401, {'WWW-Authenticate': 'Basic realm="Login Required"'}
+
+def check_hash(hash):
+    for account in SETTINGS['ACCOUNTS']['value']:
+        if hash == generate_hash(account['username'], account['password']):
+            return True
+    return False
+
+
+def generate_hash(username, password):
+    return hashlib.sha256(f"{username}:{password}".encode()).hexdigest()
 
 
 def requires_auth(f):
     def decorated(*args, **kwargs):
         # Check if authentification is required
-        if not REQUIRE_AUTHENTICATION:
+        if not SETTINGS['REQUIRE_AUTHENTICATION']['value']:
             return f(*args, **kwargs)
-        auth = request.authorization
-        if not auth or not check_auth(auth.username, auth.password):
-            return authenticate()
+        
+        # Check if the user has a valid session
+        auth = session.get('auth')
+        if not auth or not check_hash(auth):
+            return redirect('/login')
+    
         return f(*args, **kwargs)
     decorated.__name__ = f.__name__  # Questo è necessario per evitare problemi con Flask
     return decorated
 
+
 def requires_api_key(f):
     def decorated(*args, **kwargs):
         # Check if authentification is required
-        if 'api_key' not in request.json.keys() or request.json['api_key'] != API_KEY:
+        if 'api_key' not in request.json.keys() or request.json['api_key'] != SETTINGS['API_KEY']['value']:
             return "Unauthorized client", 401
         return f(*args, **kwargs)
     

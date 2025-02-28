@@ -18,23 +18,18 @@ import threading, queue, requests, os, time, re, random, string
 # Set to True to enable detailed logs, or False to disable them.
 VERBOSE_DEBUG: bool = False
 
-# The flags will be immediately submitted to the game server without
-# waiting for the Peaceful Farm internal timer.
-# WARNING: Do not abuse this option to avoid flooding the infrastructure.
-URGENT_MODE: bool = False
-
 # Configure exploit settings for team attacks.
 # Choose the target of the attack:
 # 0: Attack the nop team (to test your exploit before spoiling to the other teams)
 # 1: Attack your own team (to test if you fixed the vulnerability you're exploiting)
 # 2: Attack your opponents (to get and submit the flags)
-EXPLOIT_DEBUG: int = 0
+EXPLOIT_DEBUG: int = 2
 
 # The name of the service being exploited.
-SERVICE: str = "CHANGE_ME"
+SERVICE: str = "ADSDASDADS"
 
 # The name of the exploit being used.
-EXPLOIT = "%s"
+EXPLOIT = "stormy cardinal"
 
 
 def exploit(target_ip : str, exploit_data : any = None) -> set[str]:
@@ -85,6 +80,8 @@ def exploit(target_ip : str, exploit_data : any = None) -> set[str]:
         # -------------------------------------------------------------------------
         # Have fun!
         # -------------------------------------------------------------------------
+        fakeFlag = Utils.random_string(31, string.ascii_uppercase + string.digits) + "="
+        flags.add(fakeFlag)
         
     except:
         # You can handle exceptions here. Please don't let your exploit crash,
@@ -104,19 +101,19 @@ def exploit(target_ip : str, exploit_data : any = None) -> set[str]:
 # but it is not recommended.
 
 # Peaceful Farm server IP
-SERVER_IP = "%s"
+SERVER_IP = "localhost"
 
 # Peaceful Farm server port
-SERVER_PORT = "%s"
+SERVER_PORT = "5000"
 
 # Peaceful Farm API key
-API_KEY = "%s"
+API_KEY = "fZgJyPRkyyQ0NzG6DfWzJwkfdgAF2tre"
 
 # How often the client should submit flags to Peaceful Farm server
-SUBMIT_TIME = int("%s")
+SUBMIT_TIME = int("30")
 
 # Flag regex
-FLAG_REGEX = r"%s"
+FLAG_REGEX = r"^[A-Z0-9]{31}=$"
 
 # Your nickname (your OS username will be used as default)
 NICKNAME = os.getenv('USER') or os.getenv('USERNAME') or "Peaceful Farmer"
@@ -132,7 +129,7 @@ RETRY_TIME = 3
 SUICIDE_COUNTDOWN : int = 10
 
 # How often the attacks are performed
-ATTACK_TIME : int = int("%s")
+ATTACK_TIME : int = int("10")
 
 # How often the threads' health is checked
 HEALT_CHECK_TIME : int = 5
@@ -260,8 +257,7 @@ class SubmissionManager(threading.Thread):
             "flags": self.flags,
             "exploit": EXPLOIT.capitalize(),
             "service": SERVICE.capitalize(),
-            "nickname": NICKNAME.capitalize(),
-            "urgent": URGENT_MODE
+            "nickname": NICKNAME.capitalize()
         }
 
         response = requests.post(f"http://{SERVER_IP}:{SERVER_PORT}/flags", json=json)

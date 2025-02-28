@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peaceful Farm</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/clouds.css">
+    <link rel="icon" href="static/favicon.ico" type="image/x-icon">
+</head>
+<body class="bg-blue-200">
+
+    <!-- Background with moving clouds -->
+    <div id="background-wrap">
+        <div class="x1">
+            <div class="cloud"></div>
+        </div>
+        <div class="x2">
+            <div class="cloud"></div>
+        </div>
+        <div class="x3">
+            <div class="cloud"></div>
+        </div>
+        <div class="x4">
+            <div class="cloud"></div>
+        </div>
+        <div class="x5">
+            <div class="cloud"></div>
+        </div>
+    </div>
+
+    <section class="flex items-center justify-center min-h-screen px-6 py-8">
+        <div class="w-full max-w-md bg-white rounded-lg shadow-md p-8">
+          <!-- Logo -->
+          <img src="/static/logo.png" alt="logo">
+      
+          <!-- Form -->
+          <form class="space-y-6" action="#">
+            <!-- Username Input -->
+            <div>
+              <label for="username" class="block text-sm font-medium text-gray-700">👤 Username</label>
+              <input type="text" name="username" id="username" class="w-full mt-2 p-2.5 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500" placeholder="Enter your username" required>
+            </div>
+      
+            <!-- Password Input -->
+            <div>
+              <label for="password" class="block text-sm font-medium text-gray-700">🔐 Password</label>
+              <input type="password" name="password" id="password" class="w-full mt-2 p-2.5 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500" placeholder="••••••••" required>
+            </div>
+      
+            <!-- Submit Button -->
+            <button type="button" class="w-full py-2 px-4 bg-[#6ec5e9] text-white font-medium rounded-lg hover:bg-[#55a5c0] focus:ring-4 focus:ring-blue-300">
+                Sign in
+            </button>
+
+          </form>
+        </div>
+    </section>
+
+    <script>
+        document.querySelector('button').addEventListener('click', login);
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                login();
+            }
+        });
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // Send as form data
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('password', password);
+
+            fetch('/login', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = response.url;
+                } else {
+                    alert('Invalid username or password');
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>

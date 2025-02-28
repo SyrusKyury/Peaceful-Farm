@@ -1,16 +1,19 @@
-from flask import render_template, request, Response, jsonify
-from src.utils.auth import requires_auth, requires_api_key
+from flask import render_template, request, Response, jsonify, session, redirect
+from flask_socketio import emit
+from src.utils.auth import requires_auth, requires_api_key, check_credentials, generate_hash, check_hash
+from src.submission_service import timed_submission
 from settings import *
 from src.utils import utils
 from src.flag import Flag
-from src.database import insert_pending_flags, get_all_flags, filter_query, stats_query, wait_for_db_connection
+from src.database import insert_pending_flags, get_all_flags, filter_query, get_all_accepted_rejected, wait_for_db_connection, get_rejected
 from datetime import datetime
-from src.base import app
+from src.base import app, socketio, stop_event, urgent_event
 import importlib
 import threading
 import logging
+import copy
 
-protocol_module = importlib.import_module("plugins." + SUBMISSION_PROTOCOL)
+protocol_module = importlib.import_module(f"plugins.{SETTINGS['SUBMISSION_PROTOCOL']['value']}.{SETTINGS['SUBMISSION_PROTOCOL']['value']}")
 
 # -------------------------------------------------------------
 # Routes
@@ -20,7 +23,44 @@ protocol_module = importlib.import_module("plugins." + SUBMISSION_PROTOCOL)
 @app.route('/')
 @requires_auth
 def index():
-    return render_template('index.html', api_key=API_KEY, flag_regex=protocol_module.FLAG_REGEX)
+    return render_template('index.html',
+                           address = request.host,
+                           start = SETTINGS['COMPETITION_START_TIME']['value'].isoformat(),
+                           tick = SETTINGS['GAME_TICK_DURATION']['value']*1000,
+                           api_key = SETTINGS['API_KEY']['value'])
+
+
+# -------------------------------------------------------------
+# Login route
+# -------------------------------------------------------------
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        print("Form:", request.form)
+        username, password = request.form['username'], request.form['password']
+        if check_credentials(username, password):
+            session['auth'] = generate_hash(username, password)
+            if SETTINGS['OPEN_OPTIONS_ON_LOGIN']['value']:
+                return redirect('settings')
+            else:
+                return redirect('/')
+    else:
+        username, password = request.args.get('username'), request.args.get('password')
+        if check_hash(session.get('auth')):
+            return redirect('/')
+        else:
+            session.clear()
+            return render_template('login.html')
+        
+
+# -------------------------------------------------------------
+# Logout route
+# -------------------------------------------------------------
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/login')    
+
 
 # -------------------------------------------------------------
 # Api to submit flags to the database
@@ -39,7 +79,8 @@ def flags():
             },
             "exploit": "string",    # Name of your exploit
             "service": "string",    # Service you're exploiting
-            "nickname": "string"    # Your nickname
+            "nickname": "string",   # Your nickname
+            "urgent": bool          # Signal to send the flags immediately
         }
     """
     # Getting the request data
@@ -63,18 +104,30 @@ def flags():
     exploit = data['exploit'].upper()
     nickname = data['nickname'].upper()
     date = datetime.now()
+    urgent = data.get('urgent')
 
     #TODO: Improve in order to call insert_pending_flags only once
     for ip, request_flag_list in data['flags'].items():
         ip_flag_list = [Flag(flag=flag_i, service=service, exploit=exploit, nickname=nickname, ip=ip, date=date) for flag_i in request_flag_list]
         insert_pending_flags(ip_flag_list)
 
+    msg = f"""
+    <strong>Received flags:</strong> {sum(len(flags) for flags in data['flags'].values())}<br>
+    <strong>Attacker:</strong> {data['nickname']}<br>
+    <strong>Service:</strong> {data['service']}<br>
+    <strong>Exploit:</strong> {data['exploit']}
+    """
+
+    send_notification(msg)
+    if urgent:
+        urgent_event.set()
+    
     return f"Received {sum(len(flags) for flags in data['flags'].values())} flags from {data['nickname']} for {data['service']} using {data['exploit']}", 200
 
 # -------------------------------------------------------------
 # Get all flags
 # -------------------------------------------------------------
-@app.route('/flags', methods=['GET'])
+@app.route('/csv', methods=['GET'])
 @requires_auth
 def get_flags():
     flags = get_all_flags()
@@ -96,41 +149,88 @@ def client():
     exploit_name = utils.generate_exploit_name()
     server_ip = request.host.split(":")[0]
     server_port = request.host.split(":")[1]
-    api_key = API_KEY
-    submit_time = SUBMIT_TIME
-    attack_time = ATTACK_TIME
-    client = CLIENT_TEMPLATE % (exploit_name, server_ip, server_port, api_key, submit_time, protocol_module.FLAG_REGEX, attack_time)
+    api_key = SETTINGS['API_KEY']['value']
+    submit_time = SETTINGS['SUBMIT_TIME']['value']
+    attack_time = SETTINGS['ATTACK_TIME']['value']
+    client = CLIENT_TEMPLATE % (exploit_name, server_ip, server_port, api_key, submit_time, protocol_module.PLUGIN_SETTINGS['FLAG_REGEX']['value'], attack_time)
 
     # Return the client.py file and start the download
     return Response(client, mimetype="text/plain", headers={"Content-Disposition": "attachment;filename=client.py"})
 
 
 # -------------------------------------------------------------
+# Settings
+# -------------------------------------------------------------
+@app.route('/settings', methods=['GET', 'POST'])
+@requires_auth
+def settings():
+    global SETTINGS
+    
+    if request.method == 'POST':
+
+        settings_file = copy.deepcopy(SETTINGS)
+        protocol_settings_file = copy.deepcopy(protocol_module.PLUGIN_SETTINGS)
+        #raise Exception(request.json.items())
+
+        for key, value in request.json.items():
+            option_name = key.split('[')[1:]
+            option_name = ''.join(option_name)[:-1]
+            
+
+            # Try to handle JSON values
+            try:
+                parsed_value = json.loads(value.replace('\'', '"'))
+            except json.JSONDecodeError:
+                parsed_value = value
+
+            # If it's a string, check for boolean representations
+            if value.lower() == 'true':
+                value_to_store = True
+            elif value.lower() == 'false':
+                value_to_store = False
+            else:
+                value_to_store = parsed_value
+
+            if 'plugin_settings' in key:
+                protocol_settings_file[option_name]['value'] = value_to_store
+            else:
+                settings_file[option_name]['value'] = value_to_store
+            
+        with open('settings.json', 'w') as s:
+            json.dump(settings_file, s, indent=4)
+        
+        with open(protocol_module.SETTINGS_PATH, 'w') as s:
+            json.dump(protocol_settings_file, s, indent=4)
+
+        stop_thread()
+        SETTINGS = init_settings()
+        protocol_module.PLUGIN_SETTINGS = protocol_module.init_settings()
+        start_thread()
+
+        return redirect('/settings')
+    else:
+        return render_template('settings.html', SETTINGS=SETTINGS,
+                                                address = request.host,
+                                                start = SETTINGS['COMPETITION_START_TIME']['value'].isoformat(),
+                                                tick = SETTINGS['GAME_TICK_DURATION']['value']*1000,
+                                                api_key = SETTINGS['API_KEY']['value'],
+                                                PLUGIN_SETTINGS = protocol_module.PLUGIN_SETTINGS)
+
+# -------------------------------------------------------------
 # Filter
 # -------------------------------------------------------------
-@app.route('/filter', methods=['GET'])
+@app.route('/group', methods=['GET'])
 @requires_auth
-def filter():
+def group():
     
     # Getting the request data
     data = request.args
-    if 'group' not in data.keys() or not data['group']:
+    if not data['group']:
         return "No group provided", 400
     
-    if 't1' not in data.keys():
-        return "No t1 provided", 400
-    
-    if 't2' not in data.keys():
-        return "No t2 provided", 400
-    
-    t1 = data['t1'] if data['t1'] else "00:00"                  # HH:MM
-    t2 = data['t2'] if data['t2'] else "23:59"                  # HH:MM
-    group = data['group'].lower()                               # group by column
+    group = data['group'].lower()
 
-    t1 = datetime.now().replace(hour=int(t1.split(":")[0]), minute=int(t1.split(":")[1]))
-    t2 = datetime.now().replace(hour=int(t2.split(":")[0]), minute=int(t2.split(":")[1]))
-
-    return jsonify(filter_query(group, t1, t2)), 200
+    return jsonify(filter_query(group)), 200
 
 # -------------------------------------------------------------
 # Statistics endpoint
@@ -139,73 +239,101 @@ def filter():
 @requires_auth
 def stats():
     data = request.args
-    t1 = data['t1'] if data['t1'] else "00:00"                  # HH:MM
-    t2 = data['t2'] if data['t2'] else "23:59"                  # HH:MM
-    type = data['type'].upper() if data['type'] else None
-    value = data['value'].upper() if data['value'] else None
-
-    if not value:
-        return "No value provided", 400
+    group = data.get('group')
     
-    if not type:
-        return "No type provided", 400
-
-
-
-    t1 = datetime.now().replace(hour=int(t1.split(":")[0]), minute=int(t1.split(":")[1]))
-    t2 = datetime.now().replace(hour=int(t2.split(":")[0]), minute=int(t2.split(":")[1]))
-
-    # Divide the time between t1 and t2 in 2 minutes intervals
-    # and count the number of flags for each interval (Accepted, Rejected, Pending)
-    # Group by the selected type (Exploit, Service, Nickname) and filter by
-    # exploit, service or nickname value
-
-    flags = stats_query(t1, t2, type, value)
-    if not flags:
-        return render_template('stats.html', image=b"", denied_info={}, render_title="No flags found")
-
-    t1_int = utils.datetime_to_int(t1)
-    t2_int = utils.datetime_to_int(t2)
-
-    time_slots = range(t1_int, t2_int, GAME_TICK_DURATION)
-    start_slot = time_slots[0]
-    accepted = []
-    rejected = []
-    denied_info = {}
-
-    for i in time_slots[1:]:
-        accepted_count = 0
-        rejected_count = 0
-
-        while flags and utils.datetime_to_int(flags[0].date) < i and utils.datetime_to_int(flags[0].date) > start_slot:
-            flag = flags.pop(0)
-            if flag.status == ACCEPTED:
-                accepted_count += 1
-            else:
-                rejected_count += 1
-                denied_info[flag.flag] = flag.message
-
-        start_slot = i
-        accepted.append(accepted_count)
-        rejected.append(rejected_count)
-
-    while accepted[0] == 0 and rejected[0] == 0:
-        accepted.pop(0)
-        rejected.pop(0)
+    if not group:
+        return "No group provided", 400
     
-    while accepted[-1] == 0 and rejected[-1] == 0:
-        accepted.pop(-1)
-        rejected.pop(-1)
+    buckets = {}
+    flags = get_all_accepted_rejected()
+    
+    game_start = SETTINGS['COMPETITION_START_TIME']['value']
+    game_tick_duration = SETTINGS['GAME_TICK_DURATION']['value']
 
-    img = utils.plot_flag_statistics(accepted, rejected, type, value, t1, t2)
-    render_title = f"Flags statistics for {type} {value} from {t1.strftime('%H:%M')} to {t2.strftime('%H:%M')}"
-    return render_template('stats.html', image=img, denied_info=denied_info, render_title=render_title)
+    for f in flags:
+        seconds_since_gamestart = (f.date - game_start).total_seconds()
+        round_num = 1 + seconds_since_gamestart // game_tick_duration
+
+        if round_num not in buckets:
+            buckets[round_num] = {}
+
+        group_value = getattr(f, group, None)
+        if group_value is None:
+            continue
+
+        if group_value not in buckets[round_num]:
+            buckets[round_num][group_value] = {"accepted": 0, "rejected": 0}
+
+        if f.status == ACCEPTED:
+            buckets[round_num][group_value]["accepted"] += 1
+        else:
+            buckets[round_num][group_value]["rejected"] += 1
+    
+    return jsonify(buckets)
+
+
+# -------------------------------------------------------------
+# Rejected Info
+# -------------------------------------------------------------
+@app.route('/info', methods=['GET'])
+@requires_auth
+def rejected_info():
+    data = request.args
+    if not data.get('type') or not data.get('value'):
+        return "Invalid input", 400
+
+    data_type = data.get('type')
+    value = data.get('value')
+
+    if "raw-data" in request.headers:
+        response = [[f.message, f.date, f.flag] for f in get_rejected(data_type, value)]
+        return jsonify(response), 200
+    else:
+        return render_template('info.html',
+                           address = request.host,
+                           start = SETTINGS['COMPETITION_START_TIME']['value'].isoformat(),
+                           tick = SETTINGS['GAME_TICK_DURATION']['value']*1000,
+                           data_type = data_type.upper(),
+                           value = value,
+                           api_key = SETTINGS['API_KEY']['value'])
+    
+    
+
+# -------------------------------------------------------------
+# Socket
+# -------------------------------------------------------------
+@socketio.on('connect')
+def handle_connect():
+    print("Web client connected")
+
+
+def send_notification(message : str, color : str = "green"):
+    socketio.emit('message', {'data': message, 'color': color.lower()})
+
+# -------------------------------------------------------------
+# Thread
+# -------------------------------------------------------------
+thread = None
+
+def start_thread():
+    global thread
+    thread = threading.Thread(target=timed_submission, args=[send_notification, urgent_event, stop_event])
+    thread.daemon = True
+    thread.start()
+
+
+def stop_thread():
+    global thread
+    stop_event.set()
+    urgent_event.set()
+    thread.join()
+    stop_event.clear()
+    urgent_event.clear()
+
 
 # -------------------------------------------------------------
 # Main
 # -------------------------------------------------------------
-
-from src.submission_service import timed_submission
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -218,8 +346,6 @@ if __name__ == '__main__':
 
     # Start the background task in a separate thread
     print("Starting the background task...")
-    thread = threading.Thread(target=timed_submission)
-    thread.daemon = True
-    thread.start()
+    start_thread()
     
-    app.run(debug=FLASK_DEBUG, host="0.0.0.0", port=PEACEFUL_FARM_SERVER_PORT)
+    app.run(debug=SETTINGS['FLASK_DEBUG']['value'], host="0.0.0.0", port=PEACEFUL_FARM_SERVER_PORT)

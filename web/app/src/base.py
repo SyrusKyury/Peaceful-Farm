@@ -10,10 +10,20 @@
 # Creation Date: 09/07/2024
 # --------------------------------------------------------------------------------------------------------------------------
 from flask import Flask
-from settings import SUBMISSION_PROTOCOL
+from flask_socketio import SocketIO
+from settings import SETTINGS
 import importlib
+import uuid
+import threading
 
-protocol_module = importlib.import_module('plugins.' + SUBMISSION_PROTOCOL)
+protocol_module = importlib.import_module(f"plugins.{SETTINGS['SUBMISSION_PROTOCOL']['value']}.{SETTINGS['SUBMISSION_PROTOCOL']['value']}")
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = str(uuid.uuid4())
+socketio = SocketIO(app)
+
+stop_event = threading.Event()
+urgent_event = threading.Event()
+
+
 app.register_blueprint(protocol_module.PROTOCOL_BLUEPRINT)

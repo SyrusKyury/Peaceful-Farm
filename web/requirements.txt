@@ -27,3 +27,4 @@ urllib3==2.2.3
 Werkzeug==3.0.4
 zipp==3.20.2
 pwntools==4.12.0
+flask-socketio

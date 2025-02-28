@@ -1,0 +1,67 @@
+{
+    "OPEN_OPTIONS_ON_LOGIN": {
+        "name": "Open options on login",
+        "description": "Automatically open the options menu upon user login for quick access.",
+        "value": false
+    },
+    "FLASK_DEBUG": {
+        "name": "Flask Debug Mode",
+        "description": "Enable debug mode for the Flask application. WARNING: Do not enable in competition.",
+        "value": true
+    },
+    "FLAGS_SUBMISSION_DEBUG": {
+        "name": "Flags Submission Debug Mode",
+        "description": "Enable plugin debug mode for flag submission. WARNING: Not every plugin supports it.",
+        "value": true
+    },
+    "GAME_TICK_DURATION": {
+        "name": "Game Tick Duration",
+        "description": "Duration of each game tick in seconds.",
+        "value": 120
+    },
+    "FLAGS_SUBMISSION_WINDOW": {
+        "name": "Flags Submission Window",
+        "description": "Time window (in seconds) before the game tick ends to submit flags.",
+        "value": 20
+    },
+    "COMPETITION_START_TIME": {
+        "name": "Competition Start Time",
+        "description": "Competition start datetime [YYYY-MM-DD HH:mm:SS]",
+        "value": "2024-07-29 10:00:00"
+    },
+    "SUBMISSION_PROTOCOL": {
+        "name": "Submission Protocol",
+        "description": "Submission protocol (choose any file from the plugins folder).",
+        "value": "ccit"
+    },
+    "REQUIRE_AUTHENTICATION": {
+        "name": "Require Authentication",
+        "description": "Toggle authentication requirement for the client.",
+        "value": true
+    },
+    "ACCOUNTS": {
+        "name": "Client Accounts",
+        "description": "List of accounts for client authentication on the web application.",
+        "value": [
+            {
+                "username": "napoli",
+                "password": "forzanapoli"
+            }
+        ]
+    },
+    "API_KEY": {
+        "name": "API Key",
+        "description": "API key to authenticate client submissions to the Peaceful Farm server.",
+        "value": "fZgJyPRkyyQ0NzG6DfWzJwkfdgAF2tre"
+    },
+    "SUBMIT_TIME": {
+        "name": "Submit Time",
+        "description": "Frequency of client flag submissions to the server (in seconds).",
+        "value": 30
+    },
+    "ATTACK_TIME": {
+        "name": "Attack Time",
+        "description": "Frequency of client attacks on their targets (in seconds).",
+        "value": 10
+    }
+}

@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import json
 # --------------------------------------------------------------------------------------------------------------------------
 # Desc: This file contains the configuration of the server. Every setting can be changed to customize the server behavior.
 # Version: 1.1
@@ -15,65 +16,13 @@ import os
 # 1.0 -> Initial version.
 # --------------------------------------------------------------------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# Testing Configuration
-# ------------------------------------------------------------------------------
+def init_settings():
+    SETTINGS = json.loads(open('settings.json').read())
+    SETTINGS['COMPETITION_START_TIME']['value'] = datetime.strptime(SETTINGS['COMPETITION_START_TIME']['value'],
+                                                                    "%Y-%m-%d %H:%M:%S")
+    return SETTINGS
 
-# Set to True to enable debug mode for the Flask application.
-# WARNING: Do not enable debug mode in competition because it starts
-# two threads to submit flags instead of one.
-FLASK_DEBUG = False
-
-# Set to True to enable plugin debug mode for flag submission.
-# This will emulate the submission of flags by sending them to peaceful farm itself.
-# Peaceful farm will then respond emulating the behavior of the real A/D infrastructure.
-# WARNING: Not every plugin supports debug mode.
-FLAGS_SUBMISSION_DEBUG = False
-
-# ------------------------------------------------------------------------------
-# Submission Server Configuration
-# ------------------------------------------------------------------------------
-
-# Duration of each game tick in seconds
-GAME_TICK_DURATION = 120
-
-# Time window (in seconds) before the game tick ends to submit flags
-FLAGS_SUBMISSION_WINDOW = 20
-
-# Competition start time in the format [hour, minute, second]
-COMPETITION_START_TIME = [11, 0, 0]
-
-# Submission protocol (choose any file from the plugins folder)
-SUBMISSION_PROTOCOL = "ccit"
-
-# ------------------------------------------------------------------------------
-# Client Configuration
-# ------------------------------------------------------------------------------
-
-# Toggle authentication requirement for the client
-REQUIRE_AUTHENTICATION = True
-
-# List of accounts for client authentication on the web application
-ACCOUNTS = [
-    {"username": "napoli", "password": "forzanapoli"}
-]
-
-# API key to authenticate client submissions to the Peaceful Farm server
-API_KEY = "fZgJyPRkyyQ0NzG6DfWzJwkfdgAF2tre"
-
-# Frequency of client flag submissions to the server (in seconds)
-SUBMIT_TIME = 30
-
-# Frequency of client attacks on their targets (in seconds)
-ATTACK_TIME = 10
-
-
-# ------------------------------------------------------------------------------
-# Configuration end
-# ------------------------------------------------------------------------------
-
-
-
+SETTINGS = init_settings()
 # ------------------------------------------------------------------------------
 # Environment variables
 # ------------------------------------------------------------------------------
@@ -102,8 +51,8 @@ CLIENT_TEMPLATE = open('/app/src/utils/client_template.py').read()
 settings_feedback = f"""
 --------------------------------------------------------------------------------
 Server started with the following settings:
-- FLASK_DEBUG: {FLASK_DEBUG}
-- FLAGS_SUBMISSION_DEBUG: {FLAGS_SUBMISSION_DEBUG}
+- FLASK_DEBUG: {SETTINGS['FLASK_DEBUG']['value']}
+- FLAGS_SUBMISSION_DEBUG: {SETTINGS['FLAGS_SUBMISSION_DEBUG']['value']}
 
 - MYSQL_DATABASE: {MYSQL_DATABASE}
 - MYSQL_USER: {MYSQL_USER}
@@ -111,14 +60,14 @@ Server started with the following settings:
 - MYSQL_ROOT_PASSWORD: ********
 
 
-- GAME_TICK_DURATION: {GAME_TICK_DURATION}
-- FLAGS_SUBMISSION_WINDOW: {FLAGS_SUBMISSION_WINDOW}
-- COMPETITION_START_TIME: {datetime.now().replace(hour=int(COMPETITION_START_TIME[0]), minute=COMPETITION_START_TIME[1], second=COMPETITION_START_TIME[2])}
+- GAME_TICK_DURATION: {SETTINGS['GAME_TICK_DURATION']['value']}
+- FLAGS_SUBMISSION_WINDOW: {SETTINGS['FLAGS_SUBMISSION_WINDOW']['value']}
+- COMPETITION_START_TIME: {SETTINGS['COMPETITION_START_TIME']['value'].strftime('%Y-%m-%d %H:%M:%S')}
 
-- REQUIRE_AUTHENTICATION: {REQUIRE_AUTHENTICATION}
-- ACCOUNTS: {','.join(a['username'] for a in ACCOUNTS)}
-- API_KEY: {API_KEY}
-- SUBMIT_TIME: {SUBMIT_TIME}
+- REQUIRE_AUTHENTICATION: {SETTINGS['REQUIRE_AUTHENTICATION']['value']}
+- ACCOUNTS: {','.join(a['username'] for a in SETTINGS['ACCOUNTS']['value'])}
+- API_KEY: {SETTINGS['API_KEY']['value']}
+- SUBMIT_TIME: {SETTINGS['SUBMIT_TIME']['value']}
 
 - PEACEFUL_FARM_SERVER_PORT: {PEACEFUL_FARM_SERVER_PORT}
 """

@@ -11,46 +11,22 @@
 # 1.2.1 -> Added the flag ids endpoint to retrieve the flag ids from the submission server.
 # --------------------------------------------------------------------------------------------------------------------------
 
-from settings import FLAGS_SUBMISSION_DEBUG, PEACEFUL_FARM_SERVER_PORT, ACCEPTED, REJECTED
+from settings import *
 from src.flag import Flag
 from src.utils.auth import requires_api_key
 from flask import request, Blueprint
 import random
 import requests
 import json
+import os
 
-# -----------------------------------------------------------------------------------
-# Protocol setup
-# -----------------------------------------------------------------------------------
-#
-# IP address of the submission server   
-SUBMISSION_SERVER_IP = "10.10.0.1"
-#
-# Port the submission server listens on                           
-SUBMISSION_SERVER_PORT = "8080"
-#
-# API endpoint to submit flags                       
-SUBMISSION_SERVER_API_ENDPOINT = "/flags"
-#
-# Team token for the submission server
-SUBMISSION_SERVER_TEAM_TOKEN = "0534c4c602fdc620bac2c0f723f63c7e"
-#
-# Regex to validate flags
-FLAG_REGEX = "^[A-Z0-9]{31}=$"
-#
-# Number of teams in the competition
-N_TEAMS = 43
-#
-# Your team ID
-TEAM_ID = 38
-#
-# NOP team ID
-NOP_TEAM_ID = 0
-#
-# -----------------------------------------------------------------------------------
-# Your setup is complete!
-# -----------------------------------------------------------------------------------
+SETTINGS_PATH = os.path.join('plugins', 'ccit', 'settings.json')
+PLUGIN_SETTINGS = None
 
+def init_settings():
+    return json.loads(open(SETTINGS_PATH).read())
+
+PLUGIN_SETTINGS = init_settings()
 # -----------------------------------------------------------------------------------
 # Submit flags function
 # -----------------------------------------------------------------------------------
@@ -65,7 +41,7 @@ def submit_flags(flags : list[Flag]) -> tuple[list[Flag], int, int]:
     URL = get_url()
 
     # Send the flags to the submission server
-    server_response = requests.put(URL, headers={'X-Team-Token': SUBMISSION_SERVER_TEAM_TOKEN}, json=flags_list).text
+    server_response = requests.put(URL, headers={'X-Team-Token': PLUGIN_SETTINGS['SUBMISSION_SERVER_TEAM_TOKEN']['value']}, json=flags_list).text
     server_response = json.loads(server_response)
     
     updated_flags = []
@@ -87,6 +63,8 @@ def submit_flags(flags : list[Flag]) -> tuple[list[Flag], int, int]:
 
     rejected_flags = len(flags) - accepted_flags
 
+
+
     return updated_flags, accepted_flags, rejected_flags
 
 
@@ -100,7 +78,7 @@ PROTOCOL_BLUEPRINT = Blueprint('protocol', __name__)
 @PROTOCOL_BLUEPRINT.route('/targets', methods=['GET'])
 @requires_api_key
 def targets():
-    response = [f"10.60.{i}.1" for i in range(N_TEAMS, 0, -1) if i != NOP_TEAM_ID and i != TEAM_ID]
+    response = [f"10.60.{i}.1" for i in range(PLUGIN_SETTINGS['N_TEAMS']['value'], 0, -1) if i != PLUGIN_SETTINGS['NOP_TEAM_ID']['value'] and i != PLUGIN_SETTINGS['TEAM_ID']['value']]
     return response, 200
 
 #-----------------------------------------------------------------------------------
@@ -113,7 +91,7 @@ def targets():
 @PROTOCOL_BLUEPRINT.route('/nop', methods=['GET'])
 @requires_api_key
 def nop():
-    response = [f"10.60.{NOP_TEAM_ID}.1"]
+    response = [f"10.60.{PLUGIN_SETTINGS['NOP_TEAM_ID']['value']}.1"]
     return response, 200
 
 
@@ -126,7 +104,7 @@ def nop():
 @PROTOCOL_BLUEPRINT.route('/own', methods=['GET'])
 @requires_api_key
 def myteam():
-    response = [f"10.60.{TEAM_ID}.1"]
+    response = [f"10.60.{PLUGIN_SETTINGS['TEAM_ID']['value']}.1"]
     return response, 200
 
 
@@ -171,11 +149,11 @@ def debug():
 @PROTOCOL_BLUEPRINT.route('/flagids', methods=['GET'])
 @requires_api_key
 def flagids():
-    if FLAGS_SUBMISSION_DEBUG:
+    if SETTINGS['FLAGS_SUBMISSION_DEBUG']['value']:
         result = {f"dummy_service{i}" : [f"dummy_data{i}_{j}" for j in range(5)] for i in range(5)}
         return result, 200
     
-    flagids_result = requests.get(f"http://{SUBMISSION_SERVER_IP}:{SUBMISSION_SERVER_PORT}/flagids").json()
+    flagids_result = requests.get(f"http://{PLUGIN_SETTINGS['SUBMISSION_SERVER_IP']['value']}:{PLUGIN_SETTINGS['SUBMISSION_SERVER_PORT']['value']}/flagids").json()
     return flagids_result
 
 # -----------------------------------------------------------------------------------
@@ -186,9 +164,9 @@ def flagids():
 # -----------------------------------------------------------------------------------
 
 def get_url():
-    if FLAGS_SUBMISSION_DEBUG:
+    if SETTINGS['FLAGS_SUBMISSION_DEBUG']['value']:
         url = f"http://localhost:{PEACEFUL_FARM_SERVER_PORT}/debug"
     else:
-        url = "http://{ip}:{port}{api_endpoint}".format(ip=SUBMISSION_SERVER_IP, port=SUBMISSION_SERVER_PORT, api_endpoint=SUBMISSION_SERVER_API_ENDPOINT)
+        url = "http://{ip}:{port}{api_endpoint}".format(ip=PLUGIN_SETTINGS['SUBMISSION_SERVER_IP']['value'], port=PLUGIN_SETTINGS['SUBMISSION_SERVER_PORT']['value'], api_endpoint=PLUGIN_SETTINGS['SUBMISSION_SERVER_API_ENDPOINT']['value'])
     return url
     

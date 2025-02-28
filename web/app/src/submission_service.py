@@ -1,9 +1,9 @@
 # --------------------------------------------------------------------------------------------------------------------------
 # Desc: This file contains the background task that will submit the flags to the submission server. The background task
-# will submit the flags to the submission server FLAGS_SUBMISSION_WINDOW seconds before the end of the round.
-# FLAGS_SUBMISSION_WINDOW seconds before the end of the round, the background task will submit the flags to the submission server
+# will submit the flags to the submission server SETTINGS['FLAGS_SUBMISSION_WINDOW'] seconds before the end of the round.
+# SETTINGS['FLAGS_SUBMISSION_WINDOW'] seconds before the end of the round, the background task will submit the flags to the submission server
 # using the protocol specified in the configuration file.
-# Both the FLAGS_SUBMISSION_WINDOW and the submission protocol can be configured in the configuration file.
+# Both the SETTINGS['FLAGS_SUBMISSION_WINDOW'] and the submission protocol can be configured in the configuration file.
 #
 # Version: 1.0
 # Author: Raffaele D'Ambrosio
@@ -12,23 +12,24 @@
 # --------------------------------------------------------------------------------------------------------------------------
 import logging
 import time
+import threading
 from datetime import datetime, timedelta
-from settings import SUBMISSION_PROTOCOL, COMPETITION_START_TIME, GAME_TICK_DURATION, FLAGS_SUBMISSION_WINDOW, PENDING
+from settings import *
 import importlib
 from src.database import get_all_prending_flags, insert_flags, clear_pending_flags, insert_pending_flags
 
 # Import the submission protocol module
-protocol_module = importlib.import_module("plugins." + SUBMISSION_PROTOCOL)
+protocol_module = importlib.import_module(f"plugins.{SETTINGS['SUBMISSION_PROTOCOL']['value']}.{SETTINGS['SUBMISSION_PROTOCOL']['value']}")
 
 
 # -----------------------------------------------------------------------------------
 # Background task to submit the flags to the submission server
 # -----------------------------------------------------------------------------------
 
-def timed_submission():
-    game_start = datetime.now().replace(hour=COMPETITION_START_TIME[0], minute=COMPETITION_START_TIME[1], second=COMPETITION_START_TIME[2], microsecond=0)
+def timed_submission(send, urgent_event : threading.Event, stop_event : threading.Event):
+    game_start = SETTINGS['COMPETITION_START_TIME']['value']
     seconds_since_gamestart: float = (datetime.now() - game_start).total_seconds()
-    current_round: int = 1 + seconds_since_gamestart // GAME_TICK_DURATION
+    current_round: int = 1 + seconds_since_gamestart // SETTINGS['GAME_TICK_DURATION']['value']
 
     if current_round < 0:
         logging.info("\t\tGame has not started yet")
@@ -44,7 +45,7 @@ def timed_submission():
     logging.info("\t\t" + "-"*50 + "\n\n\n\n")
 
     while True:
-        next_round_seconds_offset = GAME_TICK_DURATION * current_round
+        next_round_seconds_offset = SETTINGS['GAME_TICK_DURATION']['value'] * current_round
         minutes, seconds = divmod(next_round_seconds_offset, 60)
         hours, minutes = divmod(minutes, 60)
         next_round_diff: float = timedelta(
@@ -54,7 +55,7 @@ def timed_submission():
             game_start + next_round_diff - datetime.now()
         ).total_seconds()
 
-        to_wait = seconds_until_next_round - FLAGS_SUBMISSION_WINDOW
+        to_wait = seconds_until_next_round - SETTINGS['FLAGS_SUBMISSION_WINDOW']['value']
 
         if to_wait < 0:
             to_wait = 0
@@ -63,17 +64,26 @@ def timed_submission():
         logging.info(
             f"\t\t[{timestamp}] Waiting {to_wait:.2f} seconds before submitting"
         )
-        time.sleep(to_wait)
+
         try:
-            flag_processing()
+            urgent_event.wait(to_wait)
+        except:
+            pass
+        
+        urgent_event.clear()
+        if stop_event.is_set():
+            return
+        
+        try:
+            flag_processing(send)
         except Exception as e:
             logging.error(f"\t\tError submitting flags: {e}")
 
-        time.sleep(FLAGS_SUBMISSION_WINDOW + 5)
+        time.sleep(SETTINGS['FLAGS_SUBMISSION_WINDOW']['value'] + 5)
         current_round += 1
 
 
-def flag_processing():
+def flag_processing(send):
     flags = get_all_prending_flags()
 
     # If there are no flags to submit, return
@@ -99,6 +109,15 @@ def flag_processing():
 
     # Insert the still pending flags into the database
     insert_pending_flags(still_pending)
+
+    msg = f"""
+    Submission completed!<br>
+    <strong>Submited flags</strong>: {len(flags)}<br>
+    <strong>Accepted flags</strong>: {accepted_flags}<br>
+    <strong>Rejected flags</strong>: {rejected_flags}<br>
+    <strong>Pending flags</strong>: {len(still_pending)}
+    """
+    send(msg, "blue")
 
     # Print the submission results
     logging.info("\t\t" + "-"*50)

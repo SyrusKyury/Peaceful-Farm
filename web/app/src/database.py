@@ -1,5 +1,5 @@
 from flask_mysqldb import MySQL
-from settings import MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE
+from settings import MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, REJECTED
 from src.base import app
 from time import sleep
 from src.flag import Flag
@@ -114,7 +114,7 @@ def get_all_flags():
         return flags
     
 
-def filter_query(group : str, t1 : datetime, t2 : datetime) -> list[Flag]:
+def filter_query(group : str) -> list[Flag]:
     query = f"""SELECT 
     {group} AS selected_group,
     SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS Accepted,
@@ -125,7 +125,6 @@ def filter_query(group : str, t1 : datetime, t2 : datetime) -> list[Flag]:
         UNION
         SELECT flag, service, exploit, nickname, ip, date, 0 AS status, NULL AS message FROM pending_flags
     ) AS combined_flags
-    WHERE date BETWEEN '{t1}' AND '{t2}'
     GROUP BY {group};"""
 
     with app.app_context():
@@ -153,3 +152,29 @@ def stats_query(t1 : datetime, t2 : datetime, type : str, value : str) -> list[F
         data = [Flag(dictionary={f"{type}": i[0], "date": i[1], "status": i[2], "message": i[3], "flag": i[4]}) for i in data]
         cur.close()
         return data
+    
+
+def get_all_accepted_rejected():
+    with app.app_context():
+        # Connect to the database
+        cur = mysql.connection.cursor()
+
+        # Get all the flags
+        cur.execute('SELECT * FROM flags')
+        flags = cur.fetchall()
+        cur.close()
+        flags = [Flag(query_result=i) for i in flags]
+        return flags
+    
+
+def get_rejected(type : str, value : str):
+    with app.app_context():
+        # Connect to the database
+        cur = mysql.connection.cursor()
+
+        # Get all the flags
+        cur.execute(f"SELECT * FROM flags WHERE {type}='{value}' AND STATUS={REJECTED}")
+        flags = cur.fetchall()
+        cur.close()
+        flags = [Flag(query_result=i) for i in flags]
+        return flags
