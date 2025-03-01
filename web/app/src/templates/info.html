@@ -21,13 +21,7 @@
 			</a>
 			<!-- Menu Items -->
 			<div class="flex space-x-2 items-stretch h-full">
-                <a href="old.html" title="Published exploits" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
-                <img src="/static/old.png" class="w-6 h-6">
-                </a>
-                <a href="flag.html" title="Watch running exploits" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
-				<img src="/static/eye.png" class="w-6 h-6">
-				</a>    
-				<a href="flag.html" title="Submit a flag manually" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
+				<a href="#" id="submit-flag-btn" title="Submit a flag manually" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
 				<img src="/static/flag.png" class="w-6 h-6">
 				</a>
 				<a href="csv" title="Download Flags as CSV" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
@@ -68,6 +62,23 @@
 				<div class="cloud"></div>
 			</div>
 		</div>
+
+		<div id="flag-popup" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+			<div class="bg-white p-6 rounded-lg shadow-lg w-96">
+				<h2 class="text-lg font-bold mb-4">Submit a Flag</h2>
+				<label class="block mb-2">Flag:</label>
+				<input type="text" id="flag-input" class="w-full p-2 border border-gray-300 rounded mb-4">
+				<div class="flex items-center mb-4">
+					<input type="checkbox" id="urgent-flag" class="mr-2">
+					<label for="urgent-flag">Urgent</label>
+				</div>
+				<div class="flex justify-end space-x-2">
+					<button id="close-popup" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded">Cancel</button>
+					<button id="submit-flag" class="bg-[#54c168] hover:bg-[#078030] text-white px-4 py-2 rounded">Submit</button>
+				</div>
+			</div>
+		</div>
+
 		<!-- Centered Content Container -->
 		<div class="relative bg-white bg-opacity-90 shadow-lg rounded-xl p-8 w-11/12 mt-20 flex flex-col">
             <h1 class="text-3xl font-bold text-[#6ec5e9] text-center tracking-tight">
@@ -101,12 +112,7 @@
 			let chart;
 			
 			function updateTable() {
-                fetch('/info' + window.location.search, {
-                    method: 'GET',
-                    headers: {
-                        'raw-data': 'true'
-                    }
-                })
+                fetch('/info_data' + window.location.search)
                 .then(response => response.json())
                 .then(response => {
                     // Sort by the second column (index 1) in descending order
@@ -214,6 +220,55 @@
 		function getRandomColor() {
 		return `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 1)`;
 		}
+
+		document.getElementById('submit-flag-btn').addEventListener('click', function(event) {
+			event.preventDefault(); // Evita la navigazione predefinita
+			document.getElementById('flag-popup').classList.remove('hidden');
+		});
+
+		document.getElementById('close-popup').addEventListener('click', function() {
+			document.getElementById('flag-popup').classList.add('hidden');
+		});
+
+		document.getElementById('submit-flag').addEventListener('click', function() {
+			const flag = {'Front-End Submission' : [document.getElementById('flag-input').value]};
+			const isUrgent = document.getElementById('urgent-flag').checked;
+			const api_key = '{{api_key}}';
+			const exploit = 'Front-End Submission';
+			const service = 'Front-End Submission';
+			const nickname = 'Front-End Submission';
+			
+			if (document.getElementById('flag-input').value.trim() === "") {
+				
+				return;
+			}
+			
+			fetch('/flags', {
+				method: 'POST',
+				headers: {
+				'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+				flags: flag,
+				exploit: exploit,
+				service: service,
+				nickname: nickname,
+				api_key: api_key,
+				urgent: isUrgent
+				})
+			}).catch(error => {
+				// Handle error
+				alert('An error occurred. Please try again later.');
+				console.log(error);
+			});
+		});
+
+		document.getElementById('flag-popup').addEventListener('click', function(event) {
+		// Se l'utente clicca sullo sfondo (non sulla finestra del popup)
+		if (event.target === this) {
+			this.classList.add('hidden');
+		}
+		});
 
 
         // Update the progress bar every 200 milliseconds

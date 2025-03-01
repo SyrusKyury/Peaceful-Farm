@@ -273,7 +273,7 @@ def stats():
 
 
 # -------------------------------------------------------------
-# Rejected Info
+# Info page
 # -------------------------------------------------------------
 @app.route('/info', methods=['GET'])
 @requires_auth
@@ -285,19 +285,30 @@ def rejected_info():
     data_type = data.get('type')
     value = data.get('value')
 
-    if "raw-data" in request.headers:
-        response = [[f.message, f.date, f.flag] for f in get_rejected(data_type, value)]
-        return jsonify(response), 200
-    else:
-        return render_template('info.html',
-                           address = request.host,
-                           start = SETTINGS['COMPETITION_START_TIME']['value'].isoformat(),
-                           tick = SETTINGS['GAME_TICK_DURATION']['value']*1000,
-                           data_type = data_type.upper(),
-                           value = value,
-                           api_key = SETTINGS['API_KEY']['value'])
-    
-    
+    return render_template('info.html',
+                        address = request.host,
+                        start = SETTINGS['COMPETITION_START_TIME']['value'].isoformat(),
+                        tick = SETTINGS['GAME_TICK_DURATION']['value']*1000,
+                        data_type = data_type.upper(),
+                        value = value,
+                        api_key = SETTINGS['API_KEY']['value'])
+
+# -------------------------------------------------------------
+# Info data
+# -------------------------------------------------------------
+@app.route('/info_data', methods=['GET'])
+@requires_auth
+def info_data():
+    data = request.args
+    if not data.get('type') or not data.get('value'):
+        return "Invalid input", 400
+
+    data_type = data.get('type')
+    value = data.get('value')
+
+    response = [[f.message, f.date, f.flag] for f in get_rejected(data_type, value)]
+    return jsonify(response), 200
+
 
 # -------------------------------------------------------------
 # Socket

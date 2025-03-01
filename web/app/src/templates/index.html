@@ -21,9 +21,6 @@
 			</a>
 			<!-- Menu Items -->
 			<div class="flex space-x-2 items-stretch h-full">
-                <a href="old.html" title="Published exploits" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
-                <img src="/static/old.png" class="w-6 h-6">
-                </a> 
 				<a href="#" id="submit-flag-btn" title="Submit a flag manually" class="flex items-center justify-center bg-[#6ec5e9] hover:bg-[#55a5c0] rounded-xl p-3 transition-all duration-200">
 				<img src="/static/flag.png" class="w-6 h-6">
 				</a>
@@ -283,11 +280,11 @@
 
             // Update the progress bar width based on the calculated percentage
             const progressBar = document.getElementById('progress-bar');
-            progressBar.style.width = `${tickPercentage}%`;
+			progressBar.style.width = `${tickPercentage}%`;
         }
 
 		function getRandomColor() {
-		return `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 1)`;
+			return `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 1)`;
 		}
 
 
