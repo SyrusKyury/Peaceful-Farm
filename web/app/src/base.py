@@ -11,19 +11,22 @@
 # --------------------------------------------------------------------------------------------------------------------------
 from flask import Flask
 from flask_socketio import SocketIO
-from settings import SETTINGS
+from settings import *
+from src.database_service import DatabaseService
+from src.submission_service import SubmissionService
+from src.notification_service import NotificationService
+from src.auth_service import AuthService
 import importlib
 import uuid
-import threading
 
-protocol_module = importlib.import_module(f"plugins.{SETTINGS['SUBMISSION_PROTOCOL']['value']}.{SETTINGS['SUBMISSION_PROTOCOL']['value']}")
+plugin_module = importlib.import_module(f"plugins.{SETTINGS['SUBMISSION_PROTOCOL']['value']}.{SETTINGS['SUBMISSION_PROTOCOL']['value']}")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = str(uuid.uuid4())
 socketio = SocketIO(app)
 
-stop_event = threading.Event()
-urgent_event = threading.Event()
-
-
-app.register_blueprint(protocol_module.PROTOCOL_BLUEPRINT)
+database_service = DatabaseService(app)
+notification_service = NotificationService(socketio)
+auth_service = AuthService()
+plugin = getattr(plugin_module, SETTINGS['SUBMISSION_PROTOCOL']['value'].upper())(app, auth_service)
+submission_service = SubmissionService(notification_service, database_service, plugin)

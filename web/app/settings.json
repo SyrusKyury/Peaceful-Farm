@@ -4,11 +4,6 @@
         "description": "Automatically open the options menu upon user login for quick access.",
         "value": false
     },
-    "FLASK_DEBUG": {
-        "name": "Flask Debug Mode",
-        "description": "Enable debug mode for the Flask application. WARNING: Do not enable in competition.",
-        "value": true
-    },
     "FLAGS_SUBMISSION_DEBUG": {
         "name": "Flags Submission Debug Mode",
         "description": "Enable plugin debug mode for flag submission. WARNING: Not every plugin supports it.",

@@ -1,10 +1,5 @@
 FROM python:3.9
 
-RUN apt-get update && apt-get install -y tzdata
-
-RUN rm -rf /etc/localtime
-RUN ln -s /usr/share/zoneinfo/$TIMEZONE /etc/localtime
-
 WORKDIR /app
 
 COPY requirements.txt .

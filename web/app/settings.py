@@ -51,7 +51,6 @@ CLIENT_TEMPLATE = open('/app/src/utils/client_template.py').read()
 settings_feedback = f"""
 --------------------------------------------------------------------------------
 Server started with the following settings:
-- FLASK_DEBUG: {SETTINGS['FLASK_DEBUG']['value']}
 - FLAGS_SUBMISSION_DEBUG: {SETTINGS['FLAGS_SUBMISSION_DEBUG']['value']}
 
 - MYSQL_DATABASE: {MYSQL_DATABASE}
