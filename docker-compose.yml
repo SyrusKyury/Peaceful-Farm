@@ -12,6 +12,9 @@ services:
     volumes:
       - ./database/data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+
 
   web:
     container_name: Peaceful-Farm-WEB
@@ -22,6 +25,8 @@ services:
       - ${PEACEFUL_FARM_SERVER_PORT}:${PEACEFUL_FARM_SERVER_PORT}
     volumes:
       - ./web/app:/app:rw
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     depends_on:
       - db
     environment:

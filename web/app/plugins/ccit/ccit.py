@@ -85,7 +85,7 @@ class CCIT(Plugin):
             return result, 200
         
         flagids_result = requests.get(f"http://{self.settings['SUBMISSION_SERVER_IP']['value']}:{self.settings['SUBMISSION_SERVER_PORT']['value']}/flagids").json()
-        return flagids_result
+        return flagids_result, 200
 
 
     def get_url(self):

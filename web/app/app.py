@@ -197,7 +197,7 @@ def settings():
         submission_service.stop()
         SETTINGS = init_settings()
         plugin.settings = plugin.init_settings()
-        submission_service.start()
+        submission_service.restart()
 
         return redirect('/settings')
     else:

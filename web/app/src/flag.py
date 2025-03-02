@@ -1,69 +1,100 @@
-# --------------------------------------------------------------------------------------------------------------------------
-# Desc: Flag class definition. It is used to store the information of a flag submission and to give a structure to the data
-# for a better management of the flags in the database.
+# ----------------------------------------------------------------------------------------------------------------------
+# Description:
+#   Flag class definition for managing flag submissions. This class provides a structured representation of flag data 
+#   and facilitates interaction with the database.
 #
-# Version: 1.0
+# Version: 1.1
 # Author: Raffaele D'Ambrosio
-# Full Path: server/web/app/src/submission_service/flag.py
-# Creation Date: 09/07/2024
-# --------------------------------------------------------------------------------------------------------------------------
+# File Path: web/app/src/submission_service/flag.py
+# Created On: 09/07/2024
+# Last Updated: 02/03/2025
+#
+# Changelog:
+#   - Improved readability and conciseness of the description.
+#   - Changed "manage flag data" → "facilitates interaction with the database" for clarity.
+#   - Added "Version 1.1" to reflect updates.
+#   - Included "Last Updated" field for better tracking.
+#   - Reformatted comments for consistency.
+# ----------------------------------------------------------------------------------------------------------------------
+
 from datetime import datetime
 
 class Flag:
-
     """
-        This class is used to store the information about a flag. 
+    A class representing a flag submission.
 
-        
-        :param flag: The flag string
-        :param service: The service the flag is related to
-        :param exploit: The exploit used to obtain the flag
-        :param nickname: The nickname of the user that submitted the flag
-        :param ip: The IP address of the server where the flag was found
-        :param date: The date and time when the flag was submitted
-        :param status: The status of the flag (0: Pending, 1: Accepted, 2: Rejected)
-        :param message: The message the submission server returned for the flag
-
-        :param query_result: used to initialize the class with the result of a query
-        :param dictionary: used to initialize the class with a dictionary
+    Attributes:
+        flag (str): The flag string.
+        service (str): The service the flag is related to.
+        exploit (str): The exploit used to obtain the flag.
+        nickname (str): The nickname of the user who submitted the flag.
+        ip (str): The IP address of the server where the flag was found.
+        date (datetime): The date and time when the flag was submitted.
+        status (int): The status of the flag (0: Pending, 1: Accepted, 2: Rejected).
+        message (str, optional): The response message from the submission server.
+    
+    Alternative Initialization:
+        query_result (tuple): Initialize the class with a database query result.
+        dictionary (dict): Initialize the class with a dictionary.
     """
 
-    def __init__(self, flag=None, service=None, exploit=None, nickname=None, ip=None, date=None, status=None, message=None, query_result=None, dictionary=None):
+    def __init__(
+        self, flag=None, service=None, exploit=None, nickname=None, ip=None, 
+        date=None, status=None, message=None, query_result=None, dictionary=None
+    ):
         if query_result:
-            # Query result initialization
+            # Initialize from database query result (tuple)
             self.flag = query_result[0]
-            self.service = query_result[1] if len(query_result) >= 2 else None
-            self.exploit = query_result[2] if len(query_result) >= 3 else None
-            self.nickname = query_result[3] if len(query_result) >= 4 else None
-            self.ip = query_result[4] if len(query_result) >= 5 else None
-            self.date = query_result[5] if len(query_result) >= 6 else None
-            self.status = query_result[6] if len(query_result) >= 7 else 0
-            self.message = query_result[7] if len(query_result) >= 8 else None
+            self.service = query_result[1] if len(query_result) > 1 else None
+            self.exploit = query_result[2] if len(query_result) > 2 else None
+            self.nickname = query_result[3] if len(query_result) > 3 else None
+            self.ip = query_result[4] if len(query_result) > 4 else None
+            self.date = query_result[5] if len(query_result) > 5 else None
+            self.status = query_result[6] if len(query_result) > 6 else 0
+            self.message = query_result[7] if len(query_result) > 7 else None
+
         elif dictionary:
-            self.flag = dictionary['flag']
-            self.service = dictionary['service'] if 'service' in dictionary.keys() else None
-            self.exploit = dictionary['exploit'] if 'exploit' in dictionary.keys() else None
-            self.nickname = dictionary['nickname'] if 'nickname' in dictionary.keys() else None
-            self.ip = dictionary['ip'] if 'ip' in dictionary.keys() else None
-            self.date = dictionary['date'] if 'date' in dictionary.keys() else None
-            self.status = dictionary['status'] if 'status' in dictionary.keys() else 0
-            self.message = dictionary['message'] if 'message' in dictionary.keys() else None
+            # Initialize from dictionary
+            self.flag = dictionary.get('flag')
+            self.service = dictionary.get('service')
+            self.exploit = dictionary.get('exploit')
+            self.nickname = dictionary.get('nickname')
+            self.ip = dictionary.get('ip')
+            self.date = dictionary.get('date', datetime.now())
+            self.status = dictionary.get('status', 0)
+            self.message = dictionary.get('message')
+
         else:
-            # Individual fields initialization
-            self.flag = flag if flag and len(flag) <= 255 else (flag[:255] if flag else None)
-            self.service = service if service and len(service) <= 255 else (service[:255] if service else None)
-            self.exploit = exploit if exploit and len(exploit) <= 255 else (exploit[:255] if exploit else None)
-            self.nickname = nickname if nickname and len(nickname) <= 255 else (nickname[:255] if nickname else None)
-            self.ip = ip if ip and len(ip) <= 255 else (ip[:255] if ip else None)
+            # Initialize from individual parameters
+            self.flag = self._truncate(flag)
+            self.service = self._truncate(service)
+            self.exploit = self._truncate(exploit)
+            self.nickname = self._truncate(nickname)
+            self.ip = self._truncate(ip)
             self.date = date if date else datetime.now()
-            self.status = status if status else 0
-            self.message = message if message and len(message) <= 255 else (message[:255] if message else None)
+            self.status = status if status is not None else 0
+            self.message = self._truncate(message)
+
+
+    def _truncate(self, value, max_length=255):
+        """Helper function to truncate strings to the allowed length."""
+        return value[:max_length] if isinstance(value, str) else value
 
 
     def to_list(self):
+        """Returns the flag attributes as a list for easy database storage."""
         return [self.flag, self.service, self.exploit, self.nickname, self.ip, self.date, self.status, self.message]
-    
+
 
     def __str__(self):
-        return f"Flag: {self.flag}\nService: {self.service}\nExploit: {self.exploit}\nNickname: {self.nickname}\nIP: {self.ip}\nDate: {self.date}\nStatus: {self.status}\nMessage: {self.message}"
-    
+        """Returns a string representation of the flag object."""
+        return (
+            f"Flag: {self.flag}\n"
+            f"Service: {self.service}\n"
+            f"Exploit: {self.exploit}\n"
+            f"Nickname: {self.nickname}\n"
+            f"IP: {self.ip}\n"
+            f"Date: {self.date}\n"
+            f"Status: {self.status}\n"
+            f"Message: {self.message}"
+        )

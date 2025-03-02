@@ -35,75 +35,66 @@ class SubmissionService(threading.Thread):
         self.stop_event : threading.Event = threading.Event()
         self.plugin = plugin
 
-
-    def _init_settings(self):
-        self.game_start : datetime = SETTINGS['COMPETITION_START_TIME']['value']
-        seconds_since_gamestart: float = (datetime.now() - self.game_start).total_seconds()
-        self.current_round: int = 1 + seconds_since_gamestart // SETTINGS['GAME_TICK_DURATION']['value']
-        
-        self.game_tick_duration: int = SETTINGS['GAME_TICK_DURATION']['value']
-        self.flags_submission_window: int = SETTINGS['FLAGS_SUBMISSION_WINDOW']['value']
-
-
     def run(self):
-        while True:
-            self._init_settings()
+        game_start = SETTINGS['COMPETITION_START_TIME']['value']
+        seconds_since_gamestart: float = (datetime.now() - game_start).total_seconds()
+        current_round: int = 1 + seconds_since_gamestart // SETTINGS['GAME_TICK_DURATION']['value']
 
-            if self.current_round < 0:
-                time_to_start : int = (self.game_start - datetime.now()).total_seconds()
+        if current_round < 0:
+            time_to_start : int = (game_start - datetime.now()).total_seconds()
 
-                logging.info("Game has not started yet.")
-                logging.info(f"Game will start in {time_to_start} seconds at {self.game_start.strftime('%Y-%m-%d %H:%M:%S')}")
+            logging.info("Game has not started yet.")
+            logging.info(f"Game will start in {time_to_start} seconds at {game_start.strftime('%Y-%m-%d %H:%M:%S')}")
 
-                time.sleep(time_to_start)
+            time.sleep(time_to_start)
 
-                logging.info("Game started")
-            
-            logging.info("Submission service started")
+            logging.info("Game started")
 
-            while not self.stop_event.is_set():
-                logging.info(f"Getting ready for round: {self.current_round}")
+        logging.info("Submission service started")
 
-                next_round_seconds_offset = self.game_tick_duration * self.current_round
-                minutes, seconds = divmod(next_round_seconds_offset, 60)
-                hours, minutes = divmod(minutes, 60)
-                next_round_diff: float = timedelta(
-                    hours=hours, minutes = minutes, seconds=seconds
-                )
-                seconds_until_next_round = (
-                    self.game_start + next_round_diff - datetime.now()
-                ).total_seconds()
+        while not self.stop_event.is_set():
 
-                to_wait = seconds_until_next_round - self.flags_submission_window
+            logging.info(f"Getting ready for round: {current_round}")
 
-                if to_wait < 0:
-                    to_wait = 0
+            next_round_seconds_offset = SETTINGS['GAME_TICK_DURATION']['value'] * current_round
+            minutes, seconds = divmod(next_round_seconds_offset, 60)
+            hours, minutes = divmod(minutes, 60)
+            next_round_diff: float = timedelta(
+                hours=hours, minutes = minutes, seconds=seconds
+            )
+            seconds_until_next_round = (
+                game_start + next_round_diff - datetime.now()
+            ).total_seconds()
 
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                logging.info(
-                    f"[{timestamp}] Waiting {to_wait:.2f} seconds before submitting"
-                )
+            to_wait = seconds_until_next_round - SETTINGS['FLAGS_SUBMISSION_WINDOW']['value']
 
-                try:
-                    self.urgent_event.wait(to_wait)
-                    self.urgent_event.clear()
-                except:
-                    pass
+            if to_wait < 0:
+                to_wait = 0
 
-                if self.stop_event.is_set():
-                    break
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            logging.info(
+                f"[{timestamp}] Waiting {to_wait:.2f} seconds before submitting"
+            )
 
-                try:
-                    self.flag_processing()
-                except Exception as e:
-                    logging.error(f"\t\tError submitting flags: {e}")
+            try:
+                self.urgent_event.wait(to_wait)
+                self.urgent_event.clear()
+            except:
+                pass
 
-                self.current_round += 1
-            
-            logging.info("Submission service stopped")
+            if self.stop_event.is_set():
+                self.stop_event.clear()
+                break
 
-            while self.stop_event.is_set():
-                time.sleep(1)
+            try:
+                self.flag_processing()
+            except Exception as e:
+                logging.error(f"\t\tError submitting flags: {e}")
+
+            current_round += 1
+
+        logging.info("Submission service stopped")
+
 
 
     def flag_processing(self):
@@ -164,6 +155,7 @@ class SubmissionService(threading.Thread):
         logging.info("Stopping submission service")
         self.stop_event.set()
         self.urgent_event.set()
+        self.join()
         logging.info("Submission service stopped")
 
     
@@ -173,11 +165,3 @@ class SubmissionService(threading.Thread):
         """
         self.urgent_event.set()
         logging.info("Urgent submission requested")
-
-
-    def restart(self):
-        """
-        This function will restart the submission service.
-        """
-        self.stop_event.clear()
-        self.urgent_event.clear()

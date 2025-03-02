@@ -22,7 +22,7 @@
     "COMPETITION_START_TIME": {
         "name": "Competition Start Time",
         "description": "Competition start datetime [YYYY-MM-DD HH:mm:SS]",
-        "value": "2024-07-29 10:00:00"
+        "value": "2025-03-02 10:00:00"
     },
     "SUBMISSION_PROTOCOL": {
         "name": "Submission Protocol",
