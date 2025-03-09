@@ -2,7 +2,7 @@
     "OPEN_OPTIONS_ON_LOGIN": {
         "name": "Open options on login",
         "description": "Automatically open the options menu upon user login for quick access.",
-        "value": false
+        "value": true
     },
     "FLAGS_SUBMISSION_DEBUG": {
         "name": "Flags Submission Debug Mode",

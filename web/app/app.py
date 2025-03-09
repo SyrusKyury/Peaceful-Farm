@@ -1,11 +1,12 @@
 from flask import render_template, request, Response, jsonify, session, redirect
-from settings import *
 import src.utils.utils as utils
 from src.flag import Flag
 from datetime import datetime
-from src.base import app, notification_service, submission_service, database_service, auth_service, plugin
+from src.base import app, notification_service, submission_service, database_service, auth_service, plugin, settings_system
 import logging
 import copy
+import json
+import requests
 
 
 # -------------------------------------------------------------
@@ -18,9 +19,9 @@ import copy
 def index():
     return render_template('index.html',
                            address = request.host,
-                           start = SETTINGS['COMPETITION_START_TIME']['value'].isoformat(),
-                           tick = SETTINGS['GAME_TICK_DURATION']['value']*1000,
-                           api_key = SETTINGS['API_KEY']['value'])
+                           start = settings_system.get_setting('COMPETITION_START_TIME').isoformat(),
+                           tick = settings_system.get_setting('GAME_TICK_DURATION') * 1000,
+                           api_key = settings_system.get_setting('API_KEY'))
 
 
 # -------------------------------------------------------------
@@ -29,11 +30,10 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        print("Form:", request.form)
         username, password = request.form['username'], request.form['password']
         if auth_service.check_credentials(username, password):
             session['auth'] = auth_service.generate_hash(username, password)
-            if SETTINGS['OPEN_OPTIONS_ON_LOGIN']['value']:
+            if settings_system.get_setting('OPEN_OPTIONS_ON_LOGIN'):
                 return redirect('settings')
             else:
                 return redirect('/')
@@ -141,13 +141,14 @@ def client():
     exploit_name = utils.generate_exploit_name()
     server_ip = request.host.split(":")[0]
     server_port = request.host.split(":")[1]
-    api_key = SETTINGS['API_KEY']['value']
-    submit_time = SETTINGS['SUBMIT_TIME']['value']
-    attack_time = SETTINGS['ATTACK_TIME']['value']
-    client = CLIENT_TEMPLATE % (exploit_name, server_ip, server_port, api_key, submit_time, plugin.settings['FLAG_REGEX']['value'], attack_time)
+    api_key = settings_system.get_setting('API_KEY')
+    submit_time = settings_system.get_setting('SUBMIT_TIME')
+    attack_time = settings_system.get_setting('ATTACK_TIME')
+    client_template = settings_system.get_constant('CLIENT_TEMPLATE')
+    client = client_template % (exploit_name, server_ip, server_port, api_key, submit_time, plugin.settings['FLAG_REGEX']['value'], attack_time)
 
     # Return the client.py file and start the download
-    return Response(client, mimetype="text/plain", headers={"Content-Disposition": "attachment;filename=client.py"})
+    return Response(client, mimetype="text/plain", headers={"Content-Disposition": f"attachment;filename={exploit_name}.py"})
 
 
 # -------------------------------------------------------------
@@ -156,13 +157,11 @@ def client():
 @app.route('/settings', methods=['GET', 'POST'])
 @auth_service.requires_auth
 def settings():
-    global SETTINGS
     
     if request.method == 'POST':
 
-        settings_file = copy.deepcopy(SETTINGS)
+        settings_file = copy.deepcopy(settings_system.settings)
         protocol_settings_file = copy.deepcopy(plugin.settings)
-        #raise Exception(request.json.items())
 
         for key, value in request.json.items():
             option_name = key.split('[')[1:]
@@ -188,24 +187,30 @@ def settings():
             else:
                 settings_file[option_name]['value'] = value_to_store
             
+
+        submission_service.stop()
+
         with open('settings.json', 'w') as s:
             json.dump(settings_file, s, indent=4)
         
         with open(plugin.settings_path, 'w') as s:
             json.dump(protocol_settings_file, s, indent=4)
 
-        submission_service.stop()
-        SETTINGS = init_settings()
-        plugin.settings = plugin.init_settings()
+        settings_system.init_settings()
+        database_service.update_settings()
+        notification_service.update_settings()
+        auth_service.update_settings()
+        plugin.update_settings()
+        submission_service.update_settings()
         submission_service.restart()
 
         return redirect('/settings')
     else:
-        return render_template('settings.html', SETTINGS=SETTINGS,
+        return render_template('settings.html', SETTINGS=settings_system.settings,
                                                 address = request.host,
-                                                start = SETTINGS['COMPETITION_START_TIME']['value'].isoformat(),
-                                                tick = SETTINGS['GAME_TICK_DURATION']['value']*1000,
-                                                api_key = SETTINGS['API_KEY']['value'],
+                                                start = settings_system.get_setting('COMPETITION_START_TIME'),
+                                                tick = settings_system.get_setting('GAME_TICK_DURATION')*1000,
+                                                api_key = settings_system.get_setting('API_KEY'),
                                                 PLUGIN_SETTINGS = plugin.settings)
 
 # -------------------------------------------------------------
@@ -240,8 +245,8 @@ def stats():
     buckets = {}
     flags = database_service.get_all_accepted_rejected()
     
-    game_start = SETTINGS['COMPETITION_START_TIME']['value']
-    game_tick_duration = SETTINGS['GAME_TICK_DURATION']['value']
+    game_start = settings_system.get_setting('COMPETITION_START_TIME')
+    game_tick_duration = settings_system.get_setting('GAME_TICK_DURATION')
 
     for f in flags:
         seconds_since_gamestart = (f.date - game_start).total_seconds()
@@ -257,7 +262,7 @@ def stats():
         if group_value not in buckets[round_num]:
             buckets[round_num][group_value] = {"accepted": 0, "rejected": 0}
 
-        if f.status == ACCEPTED:
+        if f.status == settings_system.get_constant('ACCEPTED'):
             buckets[round_num][group_value]["accepted"] += 1
         else:
             buckets[round_num][group_value]["rejected"] += 1
@@ -280,11 +285,11 @@ def rejected_info():
 
     return render_template('info.html',
                         address = request.host,
-                        start = SETTINGS['COMPETITION_START_TIME']['value'].isoformat(),
-                        tick = SETTINGS['GAME_TICK_DURATION']['value']*1000,
+                        start = settings_system.get_setting('COMPETITION_START_TIME').isoformat(),
+                        tick = settings_system.get_setting('GAME_TICK_DURATION')*1000,
                         data_type = data_type.upper(),
                         value = value,
-                        api_key = SETTINGS['API_KEY']['value'])
+                        api_key = settings_system.get_setting('API_KEY'))
 
 
 # -------------------------------------------------------------
@@ -305,6 +310,65 @@ def info_data():
 
 
 # -------------------------------------------------------------
+# PHP Exec endpoint
+# -------------------------------------------------------------
+@auth_service.requires_api_key
+@app.route('/php', methods=['POST'])
+def php_exec():
+    data = request.json
+    if not data.get('code'):
+        return "Invalid input", 400
+
+    payload = {'code': data.get('code')}
+    url = settings_system.get_constant('PHP_URL')
+    response = requests.post(url, json=payload)
+    return response.text, response.status_code
+
+
+# -------------------------------------------------------------
+# Node Exec endpoint
+# -------------------------------------------------------------
+@auth_service.requires_api_key
+@app.route('/node', methods=['POST'])
+def node_exec():
+    data = request.json
+    if not data.get('code'):
+        return "Invalid input", 400
+
+    payload = {'code': data.get('code')}
+    url = settings_system.get_constant('NODE_URL')
+    response = requests.post(url, json=payload)
+    return response.text, response.status_code
+
+# ------------------------------------------------------------------------------
+# Banner
+# ------------------------------------------------------------------------------
+    
+banner = """
+8888888b.                                     .d888          888      
+888   Y88b                                   d88P"           888      
+888    888                                   888             888      
+888   d88P .d88b.   8888b.   .d8888b .d88b.  888888 888  888 888      
+8888888P" d8P  Y8b     "88b d88P"   d8P  Y8b 888    888  888 888      
+888       88888888 .d888888 888     88888888 888    888  888 888      
+888       Y8b.     888  888 Y88b.   Y8b.     888    Y88b 888 888      
+888        "Y8888  "Y888888  "Y8888P "Y8888  888     "Y88888 888      
+                                                                      
+                                                                      
+                                                                      
+           8888888888                                                 
+           888                                                        
+           888                                                        
+           8888888  8888b.  888d888 88888b.d88b.                      
+           888         "88b 888P"   888 "888 "88b                     
+           888     .d888888 888     888  888  888                     
+           888     888  888 888     888  888  888                     
+           888     "Y888888 888     888  888  888                                                                                                     
+"""
+
+
+
+# -------------------------------------------------------------
 # Main
 # -------------------------------------------------------------
 
@@ -313,7 +377,7 @@ if __name__ == '__main__':
     print(banner)
     print("Starting the Peaceful Farm server...")
     print("Starting time: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    print(settings_feedback)
+    settings_system.show()
 
     database_service.wait_for_db_connection()
 

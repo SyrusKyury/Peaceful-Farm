@@ -1,15 +1,32 @@
 from src.plugin import Plugin
-from settings import ACCEPTED, REJECTED, SETTINGS, PEACEFUL_FARM_SERVER_PORT
-from flask import request
+from src.settings_system import SettingsSystem
+from src.auth_service import AuthService
+from src.service import Service
+from flask import request, Flask
 import requests
 import json
 import random
 
 
-class CCIT(Plugin): 
+class CCIT(Plugin, Service): 
 
-    def __init__(self, app, auth_service):
-        super().__init__(app, auth_service)
+    def __init__(self, app : Flask, auth_service : AuthService, settings_system : SettingsSystem):
+        Plugin.__init__(self, app, auth_service)
+        Service.__init__(self, settings_system)
+        self.accepted = self.settings_system.get_constant('ACCEPTED')
+        self.rejected = self.settings_system.get_constant('REJECTED')
+
+
+    def update_settings(self):
+        self.submission_server_team_token = self.settings_system.get_setting('SUBMISSION_SERVER_TEAM_TOKEN')
+        self.n_teams = self.settings_system.get_setting('N_TEAMS')
+        self.nop_team_id = self.settings_system.get_setting('NOP_TEAM_ID')
+        self.team_id = self.settings_system.get_setting('TEAM_ID')
+        self.flags_submission_debug = self.settings_system.get_setting('FLAGS_SUBMISSION_DEBUG')
+        self.submission_server_ip = self.settings_system.get_setting('SUBMISSION_SERVER_IP')
+        self.submission_server_port = self.settings_system.get_setting('SUBMISSION_SERVER_PORT')
+        self.peaceful_farm_server_port = self.settings_system.get_constant('PEACEFUL_FARM_SERVER_PORT')
+        self.submission_server_api_endpoint = self.settings_system.get_setting('SUBMISSION_SERVER_API_ENDPOINT')
 
 
     def submit_flags(self, flags):
@@ -18,7 +35,7 @@ class CCIT(Plugin):
         URL : str = self.get_url()
 
         # Send the flags to the submission server
-        server_response = requests.put(URL, headers={'X-Team-Token': self.settings['SUBMISSION_SERVER_TEAM_TOKEN']['value']}, json=flags_list).text
+        server_response = requests.put(URL, headers={'X-Team-Token': self.submission_server_team_token}, json=flags_list).text
         server_response = json.loads(server_response)
         
         updated_flags = []
@@ -28,10 +45,10 @@ class CCIT(Plugin):
         # based on the response
         for res in server_response:
             if 'Accepted' in res['msg']:
-                status = ACCEPTED
+                status = self.accepted
                 accepted_flags += 1
             else:
-                status = REJECTED
+                status = self.rejected
             
             result_flag = [i for i in flags if i.flag == res['flag']][0]
             result_flag.status = status
@@ -44,15 +61,15 @@ class CCIT(Plugin):
 
 
     def targets(self):
-        response = [f"10.60.{i}.1" for i in range(self.settings['N_TEAMS']['value'], 0, -1) if i != self.settings['NOP_TEAM_ID']['value'] and i != self.settings['TEAM_ID']['value']]
+        response = [f"10.60.{i}.1" for i in range(self.n_teams, 0, -1) if i != self.nop_team_id and i != self.team_id]
         return response, 200
 
     def nop(self):
-        response = [f"10.60.{self.settings['NOP_TEAM_ID']['value']}.1"]
+        response = [f"10.60.{self.nop_team_id}.1"]
         return response, 200
 
     def my_team(self):
-        response = [f"10.60.{self.settings['TEAM_ID']['value']}.1"]
+        response = [f"10.60.{self.team_id}.1"]
         return response, 200
 
 
@@ -80,17 +97,20 @@ class CCIT(Plugin):
 
 
     def flagids(self):
-        if SETTINGS['FLAGS_SUBMISSION_DEBUG']['value']:
+        if self.flags_submission_debug:
             result = {f"dummy_service{i}" : [f"dummy_data{i}_{j}" for j in range(5)] for i in range(5)}
             return result, 200
         
-        flagids_result = requests.get(f"http://{self.settings['SUBMISSION_SERVER_IP']['value']}:{self.settings['SUBMISSION_SERVER_PORT']['value']}/flagids").json()
+        flagids_result = requests.get(f"http://{self.submission_server_ip}:{self.submission_server_port}/flagids").json()
         return flagids_result, 200
 
 
     def get_url(self):
-        if SETTINGS['FLAGS_SUBMISSION_DEBUG']['value']:
-            url = f"http://localhost:{PEACEFUL_FARM_SERVER_PORT}/debug"
+        if self.flags_submission_debug:
+            url = f"http://localhost:{self.peaceful_farm_server_port}/debug"
         else:
-            url = "http://{ip}:{port}{api_endpoint}".format(ip=self.settings['SUBMISSION_SERVER_IP']['value'], port=self.settings['SUBMISSION_SERVER_PORT']['value'], api_endpoint=self.settings['SUBMISSION_SERVER_API_ENDPOINT']['value'])
+            url = "http://{ip}:{port}{api_endpoint}".format(
+                ip=self.submission_server_ip,
+                port=self.submission_server_port,
+                api_endpoint=self.submission_server_api_endpoint)
         return url

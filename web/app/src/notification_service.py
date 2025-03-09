@@ -12,9 +12,11 @@
 
 
 from flask_socketio import SocketIO
+from src.service import Service
+from src.settings_system import SettingsSystem
 import logging
 
-class NotificationService:
+class NotificationService(Service):
     """
     NotificationService manages real-time notifications to the web client using Flask-SocketIO.
 
@@ -25,14 +27,19 @@ class NotificationService:
 
     VALID_COLORS = {"green", "red", "blue", "yellow", "orange"}
 
-    def __init__(self, socketio: SocketIO):
+    def __init__(self, socketio: SocketIO, settings_system: SettingsSystem):
         """
         Initializes the NotificationService with a SocketIO instance and registers event handlers.
 
         - :param socketio: Flask-SocketIO instance for handling real-time communication.
         """
+        super().__init__(settings_system)
         self.socketio = socketio
         self.register_events()
+
+
+    def update_settings(self):
+        pass
 
 
     def send_notification(self, message: str, color: str = "green"):

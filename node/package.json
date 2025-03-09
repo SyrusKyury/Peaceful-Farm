@@ -1,0 +1,15 @@
+{
+    "name": "node-api-container",
+    "version": "1.0.0",
+    "description": "Node.js REST API for executing code",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js"
+    },
+    "dependencies": {
+      "express": "^4.18.2"
+    },
+    "author": "serpente_destro",
+    "license": "ISC"
+  }
+  

@@ -1,34 +1,25 @@
-# --------------------------------------------------------------------------------------------------------------------------
-# Desc: This file contains the background task that will submit the flags to the submission server. The background task
-# will submit the flags to the submission server SETTINGS['FLAGS_SUBMISSION_WINDOW'] seconds before the end of the round.
-# SETTINGS['FLAGS_SUBMISSION_WINDOW'] seconds before the end of the round, the background task will submit the flags to the submission server
-# using the protocol specified in the configuration file.
-# Both the SETTINGS['FLAGS_SUBMISSION_WINDOW'] and the submission protocol can be configured in the configuration file.
-#
-# Version: 1.0
-# Author: Raffaele D'Ambrosio
-# Full Path: server/web/app/src/submission_service/core.py
-# Creation Date: 09/07/2024
-# --------------------------------------------------------------------------------------------------------------------------
 import logging
 import time
 import threading
 from datetime import datetime, timedelta
-from settings import *
 from src.database_service import DatabaseService
 from src.notification_service import NotificationService
+from src.service import Service
+from src.settings_system import SettingsSystem
 
 # -----------------------------------------------------------------------------------
 # Background task to submit the flags to the submission server
 # -----------------------------------------------------------------------------------
 
-class SubmissionService(threading.Thread):
+class SubmissionService(threading.Thread, Service):
     """
     This class is a background task that will submit the flags to the submission server.
     """
 
-    def __init__(self, notification_service : NotificationService, database_service : DatabaseService, plugin):
-        super().__init__()
+    def __init__(self, notification_service : NotificationService, database_service : DatabaseService, plugin, settings_system : SettingsSystem):
+        threading.Thread.__init__(self)
+        Service.__init__(self, settings_system)
+
         self.notification_service : NotificationService = notification_service
         self.database_service : DatabaseService = database_service
         self.urgent_event : threading.Event = threading.Event()
@@ -36,20 +27,18 @@ class SubmissionService(threading.Thread):
         self.plugin = plugin
 
 
-    def _init_settings(self):
-        self.game_start : datetime = SETTINGS['COMPETITION_START_TIME']['value']
-        seconds_since_gamestart: float = (datetime.now() - self.game_start).total_seconds()
-        self.current_round: int = 1 + seconds_since_gamestart // SETTINGS['GAME_TICK_DURATION']['value']
-        
-        self.game_tick_duration: int = SETTINGS['GAME_TICK_DURATION']['value']
-        self.flags_submission_window: int = SETTINGS['FLAGS_SUBMISSION_WINDOW']['value']
+    def update_settings(self):
+        self.game_start : datetime = self.settings_system.get_setting('COMPETITION_START_TIME')
+        self.game_tick_duration : int = self.settings_system.get_setting('GAME_TICK_DURATION')
+        self.flags_submission_window : int = self.settings_system.get_setting('FLAGS_SUBMISSION_WINDOW')
 
 
     def run(self):
         while True:
-            self._init_settings()
+            seconds_since_gamestart: float = (datetime.now() - self.game_start).total_seconds()
+            current_round: int = 1 + seconds_since_gamestart // self.game_tick_duration
 
-            if self.current_round < 0:
+            if current_round < 0:
                 time_to_start : int = (self.game_start - datetime.now()).total_seconds()
 
                 logging.info("Game has not started yet.")
@@ -62,9 +51,9 @@ class SubmissionService(threading.Thread):
             logging.info("Submission service started")
 
             while not self.stop_event.is_set():
-                logging.info(f"Getting ready for round: {self.current_round}")
+                logging.info(f"Getting ready for round: {current_round}")
 
-                next_round_seconds_offset = self.game_tick_duration * self.current_round
+                next_round_seconds_offset = self.game_tick_duration * current_round
                 minutes, seconds = divmod(next_round_seconds_offset, 60)
                 hours, minutes = divmod(minutes, 60)
                 next_round_diff: float = timedelta(
@@ -98,7 +87,7 @@ class SubmissionService(threading.Thread):
                 except Exception as e:
                     logging.error(f"\t\tError submitting flags: {e}")
 
-                self.current_round += 1
+                current_round += 1
             
             logging.info("Submission service stopped")
 
@@ -123,10 +112,10 @@ class SubmissionService(threading.Thread):
         flags, accepted_flags, rejected_flags = self.plugin.submit_flags(flags)
 
         # Flags that are still pending
-        still_pending = list(filter(lambda x: x.status == PENDING, flags))
+        still_pending = list(filter(lambda x: x.status == self.settings_system.get_constant('PENDING'), flags))
 
         # Remove the pending flags from the list
-        flags = list(filter(lambda x: x.status != PENDING, flags))
+        flags = list(filter(lambda x: x.status != self.settings_system.get_constant('PENDING'), flags))
 
         # Insert the new flags into the database
         self.database_service.insert_flags(flags)
@@ -164,7 +153,6 @@ class SubmissionService(threading.Thread):
         logging.info("Stopping submission service")
         self.stop_event.set()
         self.urgent_event.set()
-        logging.info("Submission service stopped")
 
     
     def urgent(self):

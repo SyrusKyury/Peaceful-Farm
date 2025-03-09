@@ -1,30 +1,37 @@
 from flask_mysqldb import MySQL
-from settings import MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, REJECTED
-from time import sleep
-from src.flag import Flag
 from flask import Flask
+from src.flag import Flag
+from src.settings_system import SettingsSystem
+from src.service import Service
 
 
-class DatabaseService:
+
+class DatabaseService(Service):
     """
     This class is responsible for handling all the database operations. It uses the Flask-MySQLdb library to connect to the
     database and execute queries. The class is responsible for inserting flags into the database, getting all the pending flags
     from the database, and updating the status of the flags in the database.
     """
 
-    def __init__(self, app: Flask):
+    def __init__(self, app: Flask, settings_system: SettingsSystem) -> None:
         self.app = app
-        self.app.config['MYSQL_HOST'] = 'db'
-        self.app.config['MYSQL_USER'] = MYSQL_USER
-        self.app.config['MYSQL_PASSWORD'] = MYSQL_PASSWORD
-        self.app.config['MYSQL_DB'] = MYSQL_DATABASE
         self.mysql = MySQL(self.app)
+        super().__init__(settings_system)
+
+
+    def update_settings(self):
+        self.rejected = self.settings_system.get_constant('REJECTED')
+        self.app.config['MYSQL_HOST'] = 'db'
+        self.app.config['MYSQL_USER'] = self.settings_system.get_constant('MYSQL_USER')
+        self.app.config['MYSQL_PASSWORD'] = self.settings_system.get_constant('MYSQL_PASSWORD')
+        self.app.config['MYSQL_DB'] = self.settings_system.get_constant('MYSQL_DATABASE')
 
 
     def wait_for_db_connection(self):
         """
         Wait for the database to be ready.
         """
+        from time import sleep
         with self.app.app_context():
             while True:
                 try:
@@ -168,8 +175,9 @@ class DatabaseService:
             cur = self.mysql.connection.cursor()
 
             # Get all the flags
-            cur.execute(f"SELECT * FROM flags WHERE {type}='{value}' AND STATUS={REJECTED}")
+            cur.execute(f"SELECT * FROM flags WHERE {type}='{value}' AND STATUS={self.rejected}")
             flags = cur.fetchall()
             cur.close()
             flags = [Flag(query_result=i) for i in flags]
             return flags
+        

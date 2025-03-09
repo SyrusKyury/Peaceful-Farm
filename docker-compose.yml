@@ -35,3 +35,29 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       PEACEFUL_FARM_SERVER_PORT: ${PEACEFUL_FARM_SERVER_PORT}
+
+
+  php:
+    container_name: Peaceful-Farm-PHP
+    image: peaceful-farm-php-exec
+    build: ./php
+    restart: always
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - db
+      - web
+
+
+  node:
+    container_name: Peaceful-Farm-NODE
+    image: peaceful-farm-node-exec
+    build: ./node
+    restart: always
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - db
+      - web

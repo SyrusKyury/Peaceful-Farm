@@ -1,14 +1,21 @@
 from flask import request, session, redirect
-from settings import *
+from src.settings_system import SettingsSystem
+from src.service import Service
 import hashlib
 import hmac
 
-class AuthService:
-    def __init__(self):
-        self.accounts = SETTINGS['ACCOUNTS']['value']
-        self.require_auth = SETTINGS['REQUIRE_AUTHENTICATION']['value']
-        self.api_key = SETTINGS['API_KEY']['value']
+class AuthService(Service):
+
+    def __init__(self, settings_system: SettingsSystem):
+        super().__init__(settings_system)
     
+
+    def update_settings(self):
+        self.accounts = self.settings_system.get_setting('ACCOUNTS')
+        self.require_auth = self.settings_system.get_setting('REQUIRE_AUTH')
+        self.api_key = self.settings_system.get_setting('API_KEY')
+
+
     def check_credentials(self, username, password):
         for account in self.accounts:
             stored_username = account.get('username')
@@ -19,6 +26,7 @@ class AuthService:
                 hmac.compare_digest(stored_password, password)):
                 return True
         return False
+
 
     def check_hash(self, hash_value):
         for account in self.accounts:
@@ -31,8 +39,10 @@ class AuthService:
                     return True
         return False
 
+
     def generate_hash(self, username, password):
         return hashlib.sha256(f"{username}:{password}".encode()).hexdigest()
+
 
     def requires_auth(self, f):
         def decorated(*args, **kwargs):
@@ -47,6 +57,7 @@ class AuthService:
         
         decorated.__name__ = f.__name__  # Necessario per Flask
         return decorated
+
 
     def requires_api_key(self, f):
         def decorated(*args, **kwargs):

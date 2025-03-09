@@ -569,6 +569,25 @@ class Utils:
                 result += i.lower()
         
         return result
+    
+
+    @staticmethod
+    def exec_php(php_code : str) -> str:
+        """
+        Execute PHP code and return the output. Raises an exception if the php server isn't reachable.
+        """
+        response = requests.post(f"http://{SERVER_IP}:{SERVER_PORT}/php", json={"api_key": API_KEY, "code": php_code})
+        return response.json()['output']
+    
+
+    @staticmethod
+    def exec_node(node_code : str) -> str:
+        """
+        Execute NodeJS code and return the output. Raises an exception if the nodejs server isn't reachable.
+        """
+        response = requests.post(f"http://{SERVER_IP}:{SERVER_PORT}/node", json={"api_key": API_KEY, "code": node_code})
+        return response.json()['output']
+        
 
 #------------------------------------------------------------------------------
 # Banner
