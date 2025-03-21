@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import json
+import importlib
 
 
 class SettingsSystem:
@@ -14,7 +15,10 @@ class SettingsSystem:
         self.settings = json.loads(open('settings.json').read())
         self.settings['COMPETITION_START_TIME']['value'] = datetime.strptime(self.settings['COMPETITION_START_TIME']['value'],
                                                                         "%Y-%m-%d %H:%M:%S")
-    
+        
+        plugin_name = self.get_setting('SUBMISSION_PROTOCOL')
+        self.plugin_module = importlib.import_module(f"plugins.{plugin_name}.{plugin_name}")
+
 
     def init_constants(self):
             self.constants = {
@@ -42,7 +46,7 @@ class SettingsSystem:
             'ACCEPTED': 1,
             'REJECTED': 2
         }
-            
+
     
     def get_setting(self, key):
         if key not in self.settings:
@@ -65,6 +69,32 @@ class SettingsSystem:
     def update_settings_file(self):
         with open('settings.json', 'w') as f:
             f.write(json.dumps(self.settings, indent=4))
+
+
+    def sign_up_plugin_attributes(self, auth_service, app):
+        self.auth_service = auth_service
+        self.app = app
+        self.update_plugin()
+
+
+    def get_plugin_settings_path(self):
+        return os.path.join(os.path.join('plugins', self.get_setting('SUBMISSION_PROTOCOL')), 'settings.json')
+
+
+    def get_plugins_settings(self):
+        settings_path : str = self.get_plugin_settings_path()
+        plugin_settings : dict = json.loads(open(settings_path).read())
+        return plugin_settings
+
+
+    def update_plugin(self):
+        plugin_class : str = self.get_setting('SUBMISSION_PROTOCOL').upper()
+        self.plugin = getattr(self.plugin_module, plugin_class)(self.app, self.auth_service, self)
+
+        plugin_settings = self.get_plugins_settings()
+
+        for key, value in plugin_settings.items():
+            setattr(self.plugin, key.lower(), value['value'])
 
 
     def show(self):

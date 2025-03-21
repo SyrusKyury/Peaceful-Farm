@@ -16,7 +16,7 @@ class SubmissionService(threading.Thread, Service):
     This class is a background task that will submit the flags to the submission server.
     """
 
-    def __init__(self, notification_service : NotificationService, database_service : DatabaseService, plugin, settings_system : SettingsSystem):
+    def __init__(self, notification_service : NotificationService, database_service : DatabaseService, settings_system : SettingsSystem):
         threading.Thread.__init__(self)
         Service.__init__(self, settings_system)
 
@@ -24,7 +24,6 @@ class SubmissionService(threading.Thread, Service):
         self.database_service : DatabaseService = database_service
         self.urgent_event : threading.Event = threading.Event()
         self.stop_event : threading.Event = threading.Event()
-        self.plugin = plugin
 
 
     def update_settings(self):
@@ -109,7 +108,7 @@ class SubmissionService(threading.Thread, Service):
         logging.info(f"I'm submitting {len(flags)} flags...")
 
         # Submit the flags with the protocol module
-        flags, accepted_flags, rejected_flags = self.plugin.submit_flags(flags)
+        flags, accepted_flags, rejected_flags = self.settings_system.plugin.submit_flags(flags)
 
         # Flags that are still pending
         still_pending = list(filter(lambda x: x.status == self.settings_system.get_constant('PENDING'), flags))

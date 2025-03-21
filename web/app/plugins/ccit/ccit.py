@@ -8,25 +8,12 @@ import json
 import random
 
 
-class CCIT(Plugin, Service): 
+class CCIT(Plugin): 
 
     def __init__(self, app : Flask, auth_service : AuthService, settings_system : SettingsSystem):
-        Plugin.__init__(self, app, auth_service)
-        Service.__init__(self, settings_system)
+        Plugin.__init__(self, app, auth_service, settings_system)
         self.accepted = self.settings_system.get_constant('ACCEPTED')
         self.rejected = self.settings_system.get_constant('REJECTED')
-
-
-    def update_settings(self):
-        self.submission_server_team_token = self.settings_system.get_setting('SUBMISSION_SERVER_TEAM_TOKEN')
-        self.n_teams = self.settings_system.get_setting('N_TEAMS')
-        self.nop_team_id = self.settings_system.get_setting('NOP_TEAM_ID')
-        self.team_id = self.settings_system.get_setting('TEAM_ID')
-        self.flags_submission_debug = self.settings_system.get_setting('FLAGS_SUBMISSION_DEBUG')
-        self.submission_server_ip = self.settings_system.get_setting('SUBMISSION_SERVER_IP')
-        self.submission_server_port = self.settings_system.get_setting('SUBMISSION_SERVER_PORT')
-        self.peaceful_farm_server_port = self.settings_system.get_constant('PEACEFUL_FARM_SERVER_PORT')
-        self.submission_server_api_endpoint = self.settings_system.get_setting('SUBMISSION_SERVER_API_ENDPOINT')
 
 
     def submit_flags(self, flags):
@@ -97,7 +84,8 @@ class CCIT(Plugin, Service):
 
 
     def flagids(self):
-        if self.flags_submission_debug:
+        flags_submission_debug = self.settings_system.get_setting('FLAGS_SUBMISSION_DEBUG')
+        if flags_submission_debug:
             result = {f"dummy_service{i}" : [f"dummy_data{i}_{j}" for j in range(5)] for i in range(5)}
             return result, 200
         
@@ -106,8 +94,11 @@ class CCIT(Plugin, Service):
 
 
     def get_url(self):
-        if self.flags_submission_debug:
-            url = f"http://localhost:{self.peaceful_farm_server_port}/debug"
+        peaceful_farm_server_port = self.settings_system.get_constant('PEACEFUL_FARM_SERVER_PORT')
+        flags_submission_debug = self.settings_system.get_setting('FLAGS_SUBMISSION_DEBUG')
+
+        if flags_submission_debug:
+            url = f"http://localhost:{peaceful_farm_server_port}/debug"
         else:
             url = "http://{ip}:{port}{api_endpoint}".format(
                 ip=self.submission_server_ip,

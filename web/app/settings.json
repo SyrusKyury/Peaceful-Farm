@@ -12,7 +12,7 @@
     "GAME_TICK_DURATION": {
         "name": "Game Tick Duration",
         "description": "Duration of each game tick in seconds.",
-        "value": 120
+        "value": 9000
     },
     "FLAGS_SUBMISSION_WINDOW": {
         "name": "Flags Submission Window",

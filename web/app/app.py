@@ -2,7 +2,9 @@ from flask import render_template, request, Response, jsonify, session, redirect
 import src.utils.utils as utils
 from src.flag import Flag
 from datetime import datetime
-from src.base import app, notification_service, submission_service, database_service, auth_service, plugin, settings_system
+from src.user import User
+from src.base import app, notification_service, submission_service, database_service, settings_system, auth_service
+from flask_login import login_user, logout_user, login_required, current_user
 import logging
 import copy
 import json
@@ -15,7 +17,7 @@ import requests
 # Index route
 # -------------------------------------------------------------
 @app.route('/')
-@auth_service.requires_auth
+@login_required
 def index():
     return render_template('index.html',
                            address = request.host,
@@ -31,18 +33,20 @@ def index():
 def login():
     if request.method == 'POST':
         username, password = request.form['username'], request.form['password']
+
         if auth_service.check_credentials(username, password):
-            session['auth'] = auth_service.generate_hash(username, password)
+            user = User(username)
+            login_user(user)
+
             if settings_system.get_setting('OPEN_OPTIONS_ON_LOGIN'):
                 return redirect('settings')
             else:
                 return redirect('/')
     else:
-        username, password = request.args.get('username'), request.args.get('password')
-        if session.get('auth') and auth_service.check_hash(session.get('auth')):
+        if current_user.is_authenticated:
             return redirect('/')
         else:
-            session.clear()
+            logout_user()
             return render_template('login.html')
         
 
@@ -51,7 +55,7 @@ def login():
 # -------------------------------------------------------------
 @app.route('/logout')
 def logout():
-    session.clear()
+    logout_user()
     return redirect('/login')    
 
 
@@ -120,7 +124,7 @@ def flags():
 # Get all flags
 # -------------------------------------------------------------
 @app.route('/csv', methods=['GET'])
-@auth_service.requires_auth
+@login_required
 def get_flags():
     flags = database_service.get_all_flags()
 
@@ -136,7 +140,7 @@ def get_flags():
 # Download client.py
 # -------------------------------------------------------------
 @app.route('/client', methods=['GET'])
-@auth_service.requires_auth
+@login_required
 def client():
     exploit_name = utils.generate_exploit_name()
     server_ip = request.host.split(":")[0]
@@ -145,7 +149,7 @@ def client():
     submit_time = settings_system.get_setting('SUBMIT_TIME')
     attack_time = settings_system.get_setting('ATTACK_TIME')
     client_template = settings_system.get_constant('CLIENT_TEMPLATE')
-    client = client_template % (exploit_name, server_ip, server_port, api_key, submit_time, plugin.settings['FLAG_REGEX']['value'], attack_time)
+    client = client_template % (exploit_name, server_ip, server_port, api_key, submit_time, settings_system.plugin.flag_regex, attack_time)
 
     # Return the client.py file and start the download
     return Response(client, mimetype="text/plain", headers={"Content-Disposition": f"attachment;filename={exploit_name}.py"})
@@ -155,13 +159,13 @@ def client():
 # Settings
 # -------------------------------------------------------------
 @app.route('/settings', methods=['GET', 'POST'])
-@auth_service.requires_auth
+@login_required
 def settings():
     
     if request.method == 'POST':
 
         settings_file = copy.deepcopy(settings_system.settings)
-        protocol_settings_file = copy.deepcopy(plugin.settings)
+        protocol_settings_file = settings_system.get_plugins_settings()
 
         for key, value in request.json.items():
             option_name = key.split('[')[1:]
@@ -193,14 +197,14 @@ def settings():
         with open('settings.json', 'w') as s:
             json.dump(settings_file, s, indent=4)
         
-        with open(plugin.settings_path, 'w') as s:
+        with open(settings_system.get_plugin_settings_path(), 'w') as s:
             json.dump(protocol_settings_file, s, indent=4)
 
         settings_system.init_settings()
         database_service.update_settings()
         notification_service.update_settings()
         auth_service.update_settings()
-        plugin.update_settings()
+        settings_system.update_plugin()
         submission_service.update_settings()
         submission_service.restart()
 
@@ -211,13 +215,13 @@ def settings():
                                                 start = settings_system.get_setting('COMPETITION_START_TIME'),
                                                 tick = settings_system.get_setting('GAME_TICK_DURATION')*1000,
                                                 api_key = settings_system.get_setting('API_KEY'),
-                                                PLUGIN_SETTINGS = plugin.settings)
+                                                PLUGIN_SETTINGS = settings_system.get_plugins_settings())
 
 # -------------------------------------------------------------
 # Filter
 # -------------------------------------------------------------
 @app.route('/group', methods=['GET'])
-@auth_service.requires_auth
+@login_required
 def group():
     
     # Getting the request data
@@ -234,7 +238,7 @@ def group():
 # Statistics endpoint
 # -------------------------------------------------------------
 @app.route('/stats', methods=['GET'])
-@auth_service.requires_auth
+@login_required
 def stats():
     data = request.args
     group = data.get('group')
@@ -274,7 +278,7 @@ def stats():
 # Info page
 # -------------------------------------------------------------
 @app.route('/info', methods=['GET'])
-@auth_service.requires_auth
+@login_required
 def rejected_info():
     data = request.args
     if not data.get('type') or not data.get('value'):
@@ -296,7 +300,7 @@ def rejected_info():
 # Info data
 # -------------------------------------------------------------
 @app.route('/info_data', methods=['GET'])
-@auth_service.requires_auth
+@login_required
 def info_data():
     data = request.args
     if not data.get('type') or not data.get('value'):

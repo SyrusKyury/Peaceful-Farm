@@ -1,16 +1,17 @@
-version: '3'
 services:
   db:
     container_name: Peaceful-Farm-DB
     image: mysql:5.7
     restart: always
+    ports:
+      - 3306:3306
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
-      - ./database/data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
@@ -61,3 +62,6 @@ services:
     depends_on:
       - db
       - web
+
+volumes:
+  mysql_data:

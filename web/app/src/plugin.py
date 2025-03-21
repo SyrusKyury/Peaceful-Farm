@@ -16,13 +16,11 @@
 
 
 import abc
-import os
-import json
-import inspect
 from src.flag import Flag
 from flask import Flask
 from src.auth_service import AuthService
-import logging
+from src.settings_system import SettingsSystem
+
 
 class Plugin(abc.ABC):
     """
@@ -37,41 +35,18 @@ class Plugin(abc.ABC):
         settings (dict): The loaded settings from the JSON file.
     """
 
-    SETTINGS_FILE_NAME: str = 'settings.json'
 
-
-    def __init__(self, app: Flask, auth_service: AuthService):
+    def __init__(self, app: Flask, auth_service: AuthService, settings_system: SettingsSystem):
         """
         Initializes the Plugin instance with application and authentication service.
 
         :param app: Flask application instance.
         :param auth_service: AuthService instance for handling API key validation.
         """
-        self.settings_path: str = os.path.join(os.path.dirname(inspect.getfile(self.__class__)), self.SETTINGS_FILE_NAME)
         self.app: Flask = app
         self.auth_service: AuthService = auth_service
-        self.settings: dict = self.init_settings()
+        self.settings_system: SettingsSystem = settings_system
         self.init_routes()
-
-
-    def init_settings(self) -> dict:
-        """
-        Loads the settings from the JSON configuration file.
-
-        :return: A dictionary of settings read from the settings file.
-        :raises FileNotFoundError: If the settings file does not exist.
-        :raises json.JSONDecodeError: If the settings file contains invalid JSON.
-        """
-        try:
-            with open(self.settings_path, 'r') as f:
-                settings = json.load(f)
-            return settings
-        except FileNotFoundError:
-            logging.error(f"Settings file not found at {self.settings_path}")
-            raise
-        except json.JSONDecodeError:
-            logging.error(f"Failed to parse settings file {self.settings_path}. Please check the JSON format.")
-            raise
 
 
     @abc.abstractmethod
@@ -144,29 +119,32 @@ class Plugin(abc.ABC):
 
     def init_routes(self):
         """
-        Initializes the routes for the plugin and adds authentication middleware.
-        This /debug route is specific to the plugin and should be implemented in the subclass
-        but since most CTF Frameworks have similar structure, it is implemented here as a
-        PUT route.
-
-        Routes added:
-            - /targets
-            - /nop
-            - /my_team
-            - /debug (PUT method)
-            - /flagids
+        Initializes the routes for the plugin and updates them if they already exist.
         """
-        self.app.add_url_rule('/targets', 'targets', self.targets)
-        self.app.add_url_rule('/nop', 'nop', self.nop)
-        self.app.add_url_rule('/my_team', 'my_team', self.my_team)
-        self.app.add_url_rule('/debug', 'debug', self.debug, methods=['PUT'])
-        self.app.add_url_rule('/flagids', 'flagids', self.flagids)
+        routes = {
+            '/targets': self.targets,
+            '/nop': self.nop,
+            '/my_team': self.my_team,
+            '/debug': self.debug,
+            '/flagids': self.flagids
+        }
 
-        # Add authentication decorator to the routes
-        self.app.view_functions['targets'] = self.auth_service.requires_api_key(self.app.view_functions['targets'])
-        self.app.view_functions['nop'] = self.auth_service.requires_api_key(self.app.view_functions['nop'])
-        self.app.view_functions['my_team'] = self.auth_service.requires_api_key(self.app.view_functions['my_team'])
-        self.app.view_functions['flagids'] = self.auth_service.requires_api_key(self.app.view_functions['flagids'])
+        for route, func in routes.items():
+            endpoint = route.strip("/")  # Flask's default endpoint naming
+
+            if endpoint in self.app.view_functions:
+                # Modify the existing route's function
+                self.app.view_functions[endpoint] = func
+            else:
+                # Add new route
+                methods = ['PUT'] if route == '/debug' else ['GET']
+                self.app.add_url_rule(route, endpoint, func, methods=methods)
+
+            # Ensure authentication is applied
+            if route != '/debug':
+                self.app.view_functions[endpoint] = self.auth_service.requires_api_key(self.app.view_functions[endpoint])
 
 
-        
+
+
+            
