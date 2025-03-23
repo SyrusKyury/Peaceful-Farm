@@ -19,6 +19,7 @@
 - Real-time logging in the web interface console
 - Emulation of the Submission Server for testing purposes
 - A [simple plugin system](web/app/plugins/README.md) to update and adapt the system with ease
+- Application setup via GUI
 
 ## Architecture
 ![Architecture](docs/architecture.png)
@@ -47,9 +48,6 @@ docker compose up -d --build
 
 Your server is now ready to use!
 
-You can customize your server by modifing [.env](.env) and/or [web/app/settings.py](web/app/settings.py).
-> ⚠️ **Warning** <br> Every [plugin](web/app/plugins) may have its own settings!
-
 ### Client
 The client can be downloaded from your **Peaceful Farm Server** by visiting the index page.
 
@@ -60,3 +58,18 @@ The *exploit* function takes two parameters:
 - **exploit_data**: A storage container for any reusable data needed for future exploitations.  
 
 For example, if you're attacking a Flask web app that leaks its secret, you wouldn't want to steal the token every time the exploit runs—doing so could expose your method to others. Instead, storing and reusing the token in *exploit_data* helps maintain stealth and efficiency.  
+
+
+### Screenshots
+
+#### Login Screen
+![Login Screen of Peaceful Farm](docs/login.png)
+
+#### Dashboard Overview
+![Dashboard of Peaceful Farm](docs/dashboard.png)
+
+#### Information Page
+![Information Page of Peaceful Farm](docs/info.png)
+
+#### Settings Page
+![Settings Page of Peaceful Farm](docs/settings.png)
