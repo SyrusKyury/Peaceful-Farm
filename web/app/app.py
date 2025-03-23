@@ -22,8 +22,7 @@ def index():
     return render_template('index.html',
                            address = request.host,
                            start = settings_system.get_setting('COMPETITION_START_TIME').isoformat(),
-                           tick = settings_system.get_setting('GAME_TICK_DURATION') * 1000,
-                           api_key = settings_system.get_setting('API_KEY'))
+                           tick = settings_system.get_setting('GAME_TICK_DURATION') * 1000)
 
 
 # -------------------------------------------------------------
@@ -121,6 +120,18 @@ def flags():
     return f"Received {sum(len(flags) for flags in data['flags'].values())} flags from {data['nickname']} for {data['service']} using {data['exploit']}", 200
 
 # -------------------------------------------------------------
+# Web client flag submission
+# -------------------------------------------------------------
+@app.route('/flags/frontend', methods=['POST'])
+@login_required
+def flags_frontend():
+    data = request.json
+    data['api_key'] = settings_system.get_setting('API_KEY')
+    response = requests.post(f"http://localhost:{settings_system.get_constant('PEACEFUL_FARM_SERVER_PORT')}/flags", json=data)
+    return response.text, response.status_code
+
+
+# -------------------------------------------------------------
 # Get all flags
 # -------------------------------------------------------------
 @app.route('/csv', methods=['GET'])
@@ -214,7 +225,6 @@ def settings():
                                                 address = request.host,
                                                 start = settings_system.get_setting('COMPETITION_START_TIME'),
                                                 tick = settings_system.get_setting('GAME_TICK_DURATION')*1000,
-                                                api_key = settings_system.get_setting('API_KEY'),
                                                 PLUGIN_SETTINGS = settings_system.get_plugins_settings())
 
 # -------------------------------------------------------------
@@ -292,8 +302,7 @@ def rejected_info():
                         start = settings_system.get_setting('COMPETITION_START_TIME').isoformat(),
                         tick = settings_system.get_setting('GAME_TICK_DURATION')*1000,
                         data_type = data_type.upper(),
-                        value = value,
-                        api_key = settings_system.get_setting('API_KEY'))
+                        value = value)
 
 
 # -------------------------------------------------------------

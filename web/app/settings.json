@@ -12,12 +12,12 @@
     "GAME_TICK_DURATION": {
         "name": "Game Tick Duration",
         "description": "Duration of each game tick in seconds.",
-        "value": 120
+        "value": 20
     },
     "FLAGS_SUBMISSION_WINDOW": {
         "name": "Flags Submission Window",
         "description": "Time window (in seconds) before the game tick ends to submit flags.",
-        "value": 20
+        "value": 5
     },
     "COMPETITION_START_TIME": {
         "name": "Competition Start Time",

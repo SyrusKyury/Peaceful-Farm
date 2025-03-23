@@ -112,7 +112,6 @@ class SettingsSystem:
         - FLAGS_SUBMISSION_WINDOW: {self.settings['FLAGS_SUBMISSION_WINDOW']['value']}
         - COMPETITION_START_TIME: {self.settings['COMPETITION_START_TIME']['value'].strftime('%Y-%m-%d %H:%M:%S')}
 
-        - REQUIRE_AUTHENTICATION: {self.settings['REQUIRE_AUTHENTICATION']['value']}
         - ACCOUNTS: {','.join(a['username'] for a in self.settings['ACCOUNTS']['value'])}
         - API_KEY: {self.settings['API_KEY']['value']}
         - SUBMIT_TIME: {self.settings['SUBMIT_TIME']['value']}

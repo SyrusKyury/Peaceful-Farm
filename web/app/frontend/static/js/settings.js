@@ -1,0 +1,1 @@
+function update_page_content() {}
