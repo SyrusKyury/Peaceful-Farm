@@ -7,7 +7,7 @@ import json
 import random
 
 
-class CCIT(Plugin): 
+class NAPWNLI(Plugin): 
 
     def __init__(self, app : Flask, auth_service : AuthService, settings_system : SettingsSystem):
         Plugin.__init__(self, app, auth_service, settings_system)

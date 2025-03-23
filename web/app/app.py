@@ -389,4 +389,4 @@ if __name__ == '__main__':
     print("Starting the background task...")
     submission_service.start()
     
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=settings_system.get_constant('PEACEFUL_FARM_SERVER_PORT'), debug=False)

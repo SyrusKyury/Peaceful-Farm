@@ -8,6 +8,7 @@ RUN rm requirements.txt
 
 
 COPY ./app .
-EXPOSE 5000
+
+EXPOSE $PEACEFUL_FARM_SERVER_PORT
 
 CMD ["python3", "-u", "./app.py"]

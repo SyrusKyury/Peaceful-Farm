@@ -24,7 +24,7 @@ import os
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__).split('src')[0], 'frontend', 'templates'))
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__).split('src')[0], 'frontend', 'static'))
 
-app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+app = Flask('Peaceful Farm', template_folder=template_dir, static_folder=static_dir)
 app.config['SECRET_KEY'] = secrets.token_hex()
 socketio = SocketIO(app)
 

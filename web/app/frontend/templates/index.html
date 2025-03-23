@@ -140,6 +140,9 @@
 			function handleButtonClick(button) {
 			    if (button.classList.contains('bg-[#55a5c0]'))
 			        return
+
+				// Memorize the clicked button into the session storage
+				sessionStorage.setItem('clickedButton', button.id);
 			
 			    // Reset all buttons to default state
 			    document.querySelectorAll('.flex-row button').forEach(btn => {
@@ -423,7 +426,10 @@
 
         // Update the progress bar every 200 milliseconds
         setInterval(updateProgressBar, 200);
-		document.getElementById('ip-button').click();
+
+		// Check session storage for a previously clicked button
+		const clickedButton = sessionStorage.getItem('clickedButton') || 'ip-button';
+		document.getElementById(clickedButton).click();
 		</script>
 	</body>
 </html>

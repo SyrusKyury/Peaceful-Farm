@@ -1,0 +1,42 @@
+{
+    "SUBMISSION_SERVER_IP": {
+        "name": "Submission Server IP",
+        "description": "IP address of the submission server.",
+        "value": "10.10.0.1"
+    },
+    "SUBMISSION_SERVER_PORT": {
+        "name": "Submission Server Port",
+        "description": "Port the submission server listens on.",
+        "value": 8080
+    },
+    "SUBMISSION_SERVER_API_ENDPOINT": {
+        "name": "Submission Server API Endpoint",
+        "description": "API endpoint to submit flags.",
+        "value": "/flags"
+    },
+    "SUBMISSION_SERVER_TEAM_TOKEN": {
+        "name": "Submission Server Team Token",
+        "description": "Team token for the submission server.",
+        "value": "NAPWNLI_PLUGIN"
+    },
+    "FLAG_REGEX": {
+        "name": "Flag Regex",
+        "description": "Regex to validate flags.",
+        "value": "^[A-Z0-9]{31}=$"
+    },
+    "N_TEAMS": {
+        "name": "Number of Teams",
+        "description": "Number of teams in the competition.",
+        "value": 43
+    },
+    "TEAM_ID": {
+        "name": "Your Team ID",
+        "description": "Your team ID.",
+        "value": 38
+    },
+    "NOP_TEAM_ID": {
+        "name": "NOP Team ID",
+        "description": "NOP team ID.",
+        "value": 0
+    }
+}

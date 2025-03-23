@@ -2,7 +2,7 @@
     "OPEN_OPTIONS_ON_LOGIN": {
         "name": "Open options on login",
         "description": "Automatically open the options menu upon user login for quick access.",
-        "value": true
+        "value": false
     },
     "FLAGS_SUBMISSION_DEBUG": {
         "name": "Flags Submission Debug Mode",
@@ -12,7 +12,7 @@
     "GAME_TICK_DURATION": {
         "name": "Game Tick Duration",
         "description": "Duration of each game tick in seconds.",
-        "value": 9000
+        "value": 120
     },
     "FLAGS_SUBMISSION_WINDOW": {
         "name": "Flags Submission Window",
@@ -28,11 +28,6 @@
         "name": "Submission Protocol",
         "description": "Submission protocol (choose any file from the plugins folder).",
         "value": "ccit"
-    },
-    "REQUIRE_AUTHENTICATION": {
-        "name": "Require Authentication",
-        "description": "Toggle authentication requirement for the client.",
-        "value": true
     },
     "ACCOUNTS": {
         "name": "Client Accounts",
