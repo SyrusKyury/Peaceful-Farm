@@ -109,7 +109,12 @@ class SubmissionService(threading.Thread, Service):
         logging.info(f"I'm submitting {len(flags)} flags...")
 
         # Submit the flags with the protocol module
-        flags, accepted_flags, rejected_flags = self.settings_system.plugin.submit_flags(flags)
+        try:
+            flags, accepted_flags, rejected_flags = self.settings_system.plugin.submit_flags(flags)
+        except Exception as e:
+            logging.error(f"Error submitting flags: {e}")
+            self.notification_service.send_error_notification("Error submitting flags to the game server")
+            return
 
         # Flags that are still pending
         still_pending = list(filter(lambda x: x.status == self.settings_system.get_constant('PENDING'), flags))
