@@ -47,6 +47,7 @@ services:
     depends_on:
       - db
       - web
+    mem_limit: 256m
 
 
   node:
@@ -60,6 +61,7 @@ services:
     depends_on:
       - db
       - web
+    mem_limit: 256m
 
 volumes:
   mysql_data:
