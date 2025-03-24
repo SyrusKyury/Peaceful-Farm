@@ -84,6 +84,7 @@ class SubmissionService(threading.Thread, Service):
                 try:
                     self.flag_processing()
                 except Exception as e:
+                    self.notification_service.send_error_notification("Error submitting flags")
                     logging.error(f"\t\tError submitting flags: {e}")
 
                 current_round += 1

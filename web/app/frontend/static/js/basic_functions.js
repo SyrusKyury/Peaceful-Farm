@@ -10,6 +10,10 @@ function showNotification(message, color) {
 		// Update content
 		update_page_content();
 	}
+	else if (color === "red") {
+		notification.classList.add('bg-[#e3301c]', 'text-white', 'p-4', 'rounded-lg', 'shadow-lg', 'flex', 'items-center', 'justify-between', 'space-x-2');
+	}
+	
 	// Play the notification sound
 	notification_sound.play();
 	// Create the message content with HTML formatting

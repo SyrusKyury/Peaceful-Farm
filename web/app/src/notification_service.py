@@ -39,7 +39,7 @@ class NotificationService(Service):
 
 
     def update_settings(self):
-        pass
+        self.show_error_popups = self.settings_system.get_setting("SHOW_ERROR_POPUPS")
 
 
     def send_notification(self, message: str, color: str = "green"):
@@ -76,3 +76,15 @@ class NotificationService(Service):
         @self.socketio.on('connect')
         def handle_connect():
             logging.info("Web client connected to the server.")
+
+    
+    def send_error_notification(self, msg: str = None):
+        """
+        Sends an error notification to the web client when an exception occurs.
+        """
+        
+        if not self.show_error_popups:
+            return
+        
+        message = f"<b>ERROR:</b><br>{msg}"
+        self.send_notification(message, "red")

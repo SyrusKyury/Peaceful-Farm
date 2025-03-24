@@ -41,6 +41,9 @@ settings_system.sign_up_plugin_attributes(auth_service, app)
 
 submission_service = SubmissionService(notification_service, database_service, settings_system)
 
+
+# Login manager user loader
+
 @login_manager.user_loader
 def load_user(user_id):
     return auth_service.load_user(user_id)

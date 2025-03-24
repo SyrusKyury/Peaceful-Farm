@@ -9,10 +9,15 @@
         "description": "Enable plugin debug mode for flag submission. WARNING: Not every plugin supports it.",
         "value": true
     },
+    "SHOW_ERROR_POPUPS": {
+        "name": "Show error popups",
+        "description": "Enable error popups on front-end.",
+        "value": true
+    },
     "GAME_TICK_DURATION": {
         "name": "Game Tick Duration",
         "description": "Duration of each game tick in seconds.",
-        "value": 20
+        "value": 120
     },
     "FLAGS_SUBMISSION_WINDOW": {
         "name": "Flags Submission Window",
