@@ -30,7 +30,7 @@ class NAPWNLI(Plugin):
         # Check the server response and update the flags' status and message
         # based on the response
         for res in server_response:
-            if 'Accepted' in res['msg']:
+            if 'accepted' in res['msg'].lower():
                 status = self.accepted
                 accepted_flags += 1
             else:
@@ -47,15 +47,15 @@ class NAPWNLI(Plugin):
 
 
     def targets(self):
-        response = [f"10.60.{i}.1" for i in range(self.n_teams, 0, -1) if i != self.nop_team_id and i != self.team_id]
+        response = [f"11.0.{i}.1" for i in range(self.n_teams, 0, -1) if i != self.nop_team_id and i != self.team_id]
         return response, 200
 
     def nop(self):
-        response = [f"10.60.{self.nop_team_id}.1"]
+        response = [f"11.0.{self.nop_team_id}.1"]
         return response, 200
 
     def my_team(self):
-        response = [f"10.60.{self.team_id}.1"]
+        response = [f"11.0.{self.team_id}.1"]
         return response, 200
 
 
@@ -88,7 +88,7 @@ class NAPWNLI(Plugin):
             result = {f"dummy_service{i}" : [f"dummy_data{i}_{j}" for j in range(5)] for i in range(5)}
             return result, 200
         
-        flagids_result = requests.get(f"http://{self.submission_server_ip}:{self.submission_server_port}/flagids").json()
+        flagids_result = requests.get(f"http://{self.submission_server_ip}:{self.submission_server_port}/api/client/attack_data/").json()
         return flagids_result, 200
 
 

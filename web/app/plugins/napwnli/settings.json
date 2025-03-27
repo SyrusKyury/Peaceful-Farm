@@ -2,7 +2,7 @@
     "SUBMISSION_SERVER_IP": {
         "name": "Submission Server IP",
         "description": "IP address of the submission server.",
-        "value": "10.10.0.1"
+        "value": "11.11.0.1"
     },
     "SUBMISSION_SERVER_PORT": {
         "name": "Submission Server Port",
@@ -17,7 +17,7 @@
     "SUBMISSION_SERVER_TEAM_TOKEN": {
         "name": "Submission Server Team Token",
         "description": "Team token for the submission server.",
-        "value": "NAPWNLI_PLUGIN"
+        "value": "ebef9939b0552602"
     },
     "FLAG_REGEX": {
         "name": "Flag Regex",
@@ -27,12 +27,12 @@
     "N_TEAMS": {
         "name": "Number of Teams",
         "description": "Number of teams in the competition.",
-        "value": 43
+        "value": 4
     },
     "TEAM_ID": {
         "name": "Your Team ID",
         "description": "Your team ID.",
-        "value": 38
+        "value": 1
     },
     "NOP_TEAM_ID": {
         "name": "NOP Team ID",

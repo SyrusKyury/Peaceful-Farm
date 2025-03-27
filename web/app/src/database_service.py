@@ -110,8 +110,13 @@ class DatabaseService(Service):
                 WHERE flags.ip = %s
                 AND flags.flag = %s
             );''', [[i.flag, i.service, i.exploit, i.nickname, i.ip, i.date, i.ip, i.flag] for i in flags])
+
+            inserted = cur.rowcount
+
             self.mysql.connection.commit()
             cur.close()
+
+            return inserted
         
 
     def get_all_flags(self):

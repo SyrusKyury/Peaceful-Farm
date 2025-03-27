@@ -102,22 +102,33 @@ def flags():
     date = datetime.now()
     urgent = data.get('urgent')
 
+    inserted_flags = 0
     #TODO: Improve in order to call insert_pending_flags only once
     for ip, request_flag_list in data['flags'].items():
         ip_flag_list = [Flag(flag=flag_i, service=service, exploit=exploit, nickname=nickname, ip=ip, date=date) for flag_i in request_flag_list]
-        database_service.insert_pending_flags(ip_flag_list)
+        inserted_flags += database_service.insert_pending_flags(ip_flag_list)
 
-    msg = f"""
-    <strong>Received flags:</strong> {sum(len(flags) for flags in data['flags'].values())}<br>
-    <strong>Attacker:</strong> {data['nickname']}<br>
-    <strong>Service:</strong> {data['service']}<br>
-    <strong>Exploit:</strong> {data['exploit']}
-    """
-    notification_service.send_notification(msg)
+    if inserted_flags > 0:
+        msg = f"""
+        <strong>Received flags:</strong> {inserted_flags}<br>
+        <strong>Attacker:</strong> {data['nickname']}<br>
+        <strong>Service:</strong> {data['service']}<br>
+        <strong>Exploit:</strong> {data['exploit']}
+        """
+        notification_service.send_notification(msg)
+    else:
+        msg = f"""
+        <strong>No flags received</strong><br>
+        <strong>Attacker:</strong> {data['nickname']}<br>
+        <strong>Service:</strong> {data['service']}<br>
+        <strong>Exploit:</strong> {data['exploit']}
+        """
+        notification_service.send_notification(msg, "red")
+    
     if urgent:
         submission_service.urgent()
     
-    return f"Received {sum(len(flags) for flags in data['flags'].values())} flags from {data['nickname']} for {data['service']} using {data['exploit']}", 200
+    return f"Received {inserted_flags} flags from {data['nickname']} for {data['service']} using {data['exploit']}", 200
 
 # -------------------------------------------------------------
 # Web client flag submission

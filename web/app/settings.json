@@ -22,17 +22,17 @@
     "FLAGS_SUBMISSION_WINDOW": {
         "name": "Flags Submission Window",
         "description": "Time window (in seconds) before the game tick ends to submit flags.",
-        "value": 5
+        "value": 10
     },
     "COMPETITION_START_TIME": {
         "name": "Competition Start Time",
         "description": "Competition start datetime [YYYY-MM-DD HH:mm:SS]",
-        "value": "2025-03-02 10:00:00"
+        "value": "2025-03-25 21:00:00"
     },
     "SUBMISSION_PROTOCOL": {
         "name": "Submission Protocol",
         "description": "Submission protocol (choose any file from the plugins folder).",
-        "value": "ccit"
+        "value": "napwnli"
     },
     "ACCOUNTS": {
         "name": "Client Accounts",

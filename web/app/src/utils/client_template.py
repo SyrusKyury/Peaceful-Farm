@@ -56,41 +56,16 @@ def exploit(target_ip : str, exploit_data : any = None) -> set[str]:
         #         here etc.
         #
         # -------------------------------------------------------------------------
-        #
-        # Useful functions:
-        # 
-        # - Utils.random_string 
-        #   Generates a random string of a given length
-        #   Arguments:
-        #       length: int, the length of the string to generate
-        #       valid_set: str, the set of characters to choose from
-        #   Returns:
-        #       str: the generated string
-        #
-        # - Utils.flagids         
-        #   Returns the challenge's flag ids. Flag ids provide useful
-        #   information to exploit services. For example, they can be
-        #   usernames, ids, or any other information.
-        #   Arguments:
-        #       None
-        #   Returns:
-        #       dict: the challenge's flag ids
-        #
-        # - Utils.random_upper_lower_string
-        #   Randomly changes the case of the characters in the string.
-        #   Arguments:
-        #       string: str, the string to change the case of
-        #   Returns:
-        #       str: the string with randomly changed case
+        # You can use the class Utils to execute utility functions.
         # -------------------------------------------------------------------------
         # Have fun!
         # -------------------------------------------------------------------------
         
-    except:
+    except Exception as e:
         # You can handle exceptions here. Please don't let your exploit crash,
         # this would stop the attack for that target. If you want to ignore the
         # exception, just use the pass statement.
-        pass
+        print(f"{RED}[FAIL] [Thread {target_ip}] {e}{RESET}")
 
     finally:
         # Don't touch this, it will return only valid flags

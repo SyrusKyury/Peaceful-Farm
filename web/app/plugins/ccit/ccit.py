@@ -30,7 +30,7 @@ class CCIT(Plugin):
         # Check the server response and update the flags' status and message
         # based on the response
         for res in server_response:
-            if 'Accepted' in res['msg']:
+            if 'accepted' in res['msg'].lower():
                 status = self.accepted
                 accepted_flags += 1
             else:
