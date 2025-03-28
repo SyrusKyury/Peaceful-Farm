@@ -550,8 +550,7 @@ class Utils:
     
 
     @staticmethod
-    @property
-    def flag_regex() -> re.Pattern:
+    def get_flag_regex() -> re.Pattern:
         """
         Return the regex used to match flags.
         """
