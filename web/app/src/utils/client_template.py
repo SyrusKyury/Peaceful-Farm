@@ -494,6 +494,9 @@ class TargetManager:
 #------------------------------------------------------------------------------
 
 class Utils:
+    """
+    Utility class to provide useful functions for the client.
+    """
 
     @staticmethod
     def random_string(length : int, valid_set=string.ascii_letters + string.digits):
@@ -544,6 +547,24 @@ class Utils:
                 result += i.lower()
         
         return result
+    
+
+    @staticmethod
+    @property
+    def flag_regex() -> re.Pattern:
+        """
+        Return the regex used to match flags.
+        """
+        return re.compile(FLAG_REGEX)
+    
+    
+    @staticmethod
+    def extract_flags_from_text(text : str) -> set[str]:
+        """
+        Extract flags from a given text. The flags are matched using the regex
+        defined in the FLAG_REGEX constant.
+        """
+        return set(re.findall(Utils.regex, text))
     
 
     @staticmethod
