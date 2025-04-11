@@ -22,7 +22,7 @@
     "FLAG_REGEX": {
         "name": "Flag Regex",
         "description": "Regex to validate flags.",
-        "value": "^[A-Z0-9]{31}=$"
+        "value": "[A-Z0-9]{31}="
     },
     "N_TEAMS": {
         "name": "Number of Teams",
