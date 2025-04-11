@@ -70,7 +70,8 @@ class CCIT(Plugin):
         "Denied: flag from nop team",
         "Denied: flag is your own",
         "Denied: flag too old",
-        "Denied: flag already claimed"]
+        "Denied: flag already claimed",
+        "RESUBMIT: the flag is not active yet, wait for next round"]
         flags = list(request.json)
         response = []
         for flag in flags:
