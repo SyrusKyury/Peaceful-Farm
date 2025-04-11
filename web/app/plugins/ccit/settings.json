@@ -38,5 +38,15 @@
         "name": "NOP Team ID",
         "description": "NOP team ID.",
         "value": 0
+    },
+    "FLAGIDS_IP": {
+        "name": "FlagIDS IP",
+        "description": "IP address of the FlagIDS server.",
+        "value": "10.10.0.1"
+    },
+    "FLAGIDS_PORT": {
+        "name": "FlagIDS Port",
+        "description": "Port used by the FlagIDS server.",
+        "value": 8081
     }
 }
