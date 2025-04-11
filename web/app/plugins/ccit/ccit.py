@@ -13,6 +13,7 @@ class CCIT(Plugin):
         Plugin.__init__(self, app, auth_service, settings_system)
         self.accepted = self.settings_system.get_constant('ACCEPTED')
         self.rejected = self.settings_system.get_constant('REJECTED')
+        self.pending = self.settings_system.get_constant('PENDING')
 
 
     def submit_flags(self, flags):
@@ -33,6 +34,8 @@ class CCIT(Plugin):
             if 'accepted' in res['msg'].lower():
                 status = self.accepted
                 accepted_flags += 1
+            elif 'resubmit' in res['msg'].lower():
+                status = self.pending
             else:
                 status = self.rejected
             
@@ -88,7 +91,7 @@ class CCIT(Plugin):
             result = {f"dummy_service{i}" : [f"dummy_data{i}_{j}" for j in range(5)] for i in range(5)}
             return result, 200
         
-        flagids_result = requests.get(f"http://{self.submission_server_ip}:{self.submission_server_port}/flagids").json()
+        flagids_result = requests.get(f"http://{self.flagids_ip}:{self.flagids_port}/flagids").json()
         return flagids_result, 200
 
 
