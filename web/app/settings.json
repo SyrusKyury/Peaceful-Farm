@@ -26,8 +26,8 @@
     },
     "COMPETITION_START_TIME": {
         "name": "Competition Start Time",
-        "description": "Competition start datetime [YYYY-MM-DD HH:mm:SS]",
-        "value": "2025-03-25 21:00:00"
+        "description": "Competition start datetime [YYYY-MM-DD HH:mm:SS +TZ] CET: +0100, CEST: +0200",
+        "value": "2025-04-13 21:00:00 +0200"
     },
     "SUBMISSION_PROTOCOL": {
         "name": "Submission Protocol",

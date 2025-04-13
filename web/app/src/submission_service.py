@@ -27,7 +27,7 @@ class SubmissionService(threading.Thread, Service):
 
 
     def update_settings(self):
-        self.game_start : datetime = self.settings_system.get_setting('COMPETITION_START_TIME')
+        self.game_start : datetime = self.settings_system.get_setting('COMPETITION_START_TIME').replace(tzinfo=None)
         self.game_tick_duration : int = self.settings_system.get_setting('GAME_TICK_DURATION')
         self.flags_submission_window : int = self.settings_system.get_setting('FLAGS_SUBMISSION_WINDOW')
 

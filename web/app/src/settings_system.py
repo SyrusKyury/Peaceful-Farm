@@ -14,7 +14,7 @@ class SettingsSystem:
     def init_settings(self):
         self.settings = json.loads(open('settings.json').read())
         self.settings['COMPETITION_START_TIME']['value'] = datetime.strptime(self.settings['COMPETITION_START_TIME']['value'],
-                                                                        "%Y-%m-%d %H:%M:%S")
+                                                                        "%Y-%m-%d %H:%M:%S %z")
         
         plugin_name = self.get_setting('SUBMISSION_PROTOCOL')
         self.plugin_module = importlib.import_module(f"plugins.{plugin_name}.{plugin_name}")
