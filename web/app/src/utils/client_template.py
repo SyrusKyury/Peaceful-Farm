@@ -563,7 +563,7 @@ class Utils:
         Extract flags from a given text. The flags are matched using the regex
         defined in the FLAG_REGEX constant.
         """
-        return set(re.findall(Utils.regex, text))
+        return set(re.findall(FLAG_REGEX, text))
     
 
     @staticmethod
