@@ -28,6 +28,7 @@ class SubmissionService(threading.Thread, Service):
 
     def update_settings(self):
         self.game_start : datetime = self.settings_system.get_setting('COMPETITION_START_TIME').replace(tzinfo=None)
+        self.game_start_tz : datetime = self.settings_system.get_setting('COMPETITION_START_TIME')
         self.game_tick_duration : int = self.settings_system.get_setting('GAME_TICK_DURATION')
         self.flags_submission_window : int = self.settings_system.get_setting('FLAGS_SUBMISSION_WINDOW')
 
@@ -41,7 +42,7 @@ class SubmissionService(threading.Thread, Service):
                 time_to_start : int = (self.game_start - datetime.now()).total_seconds()
 
                 logging.info("Game has not started yet.")
-                logging.info(f"Game will start in {time_to_start} seconds at {self.game_start.strftime('%Y-%m-%d %H:%M:%S')}")
+                logging.info(f"Game will start in {time_to_start} seconds at {self.game_start_tz.strftime('%Y-%m-%d %H:%M:%S %Z')}")
 
                 time.sleep(time_to_start)
 
