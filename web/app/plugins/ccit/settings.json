@@ -27,12 +27,12 @@
     "N_TEAMS": {
         "name": "Number of Teams",
         "description": "Number of teams in the competition.",
-        "value": 43
+        "value": 80
     },
     "TEAM_ID": {
         "name": "Your Team ID",
         "description": "Your team ID.",
-        "value": 38
+        "value": 6
     },
     "NOP_TEAM_ID": {
         "name": "NOP Team ID",

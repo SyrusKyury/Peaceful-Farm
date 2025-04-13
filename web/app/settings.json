@@ -32,7 +32,7 @@
     "SUBMISSION_PROTOCOL": {
         "name": "Submission Protocol",
         "description": "Submission protocol (choose any file from the plugins folder).",
-        "value": "napwnli"
+        "value": "ccit"
     },
     "ACCOUNTS": {
         "name": "Client Accounts",
@@ -52,11 +52,11 @@
     "SUBMIT_TIME": {
         "name": "Submit Time",
         "description": "Frequency of client flag submissions to the server (in seconds).",
-        "value": 30
+        "value": 60
     },
     "ATTACK_TIME": {
         "name": "Attack Time",
         "description": "Frequency of client attacks on their targets (in seconds).",
-        "value": 10
+        "value": 20
     }
 }
